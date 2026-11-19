@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seminary Games</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
+<style>
+:root {
+  --sky: #4FC3F7; --ink: #1B1035; --paper: #FFFBEA; --pink: #FF3D9A; --yellow: #FFD23F; --muted: #5B4E7A;
+  --pixel: "Press Start 2P", "Courier New", monospace;
+  --body: "VT323", Consolas, "Courier New", monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--sky); color: var(--ink); font-family: var(--body); font-size: 23px; line-height: 1.25; }
+main { max-width: 900px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-left, 0px)) 60px max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 28px; }
+h1 { font-family: var(--pixel); font-weight: 400; font-size: clamp(1.1rem, 4vw, 1.9rem); color: #fff; text-shadow: 3px 3px 0 var(--ink); margin: 0; line-height: 1.4; }
+.intro { margin: 0; max-width: 46ch; }
+.games { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 22px; padding: 0; margin: 0; list-style: none; }
+.game { display: flex; flex-direction: column; gap: 10px; height: 100%; padding: 18px; background: var(--paper); border: 4px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); color: inherit; text-decoration: none; transition: transform .06s steps(1), box-shadow .06s steps(1); }
+.game:hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0 var(--ink); }
+.game:active { transform: translate(6px, 6px); box-shadow: none; }
+.game:focus-visible { outline: 3px dashed var(--pink); outline-offset: 4px; }
+.game h2 { font-family: var(--pixel); font-weight: 400; font-size: 0.8rem; margin: 0; line-height: 1.5; }
+.game p { margin: 0; color: var(--muted); }
+.tag { align-self: flex-start; font-family: var(--pixel); font-size: 0.5rem; background: var(--yellow); border: 2px solid var(--ink); padding: 4px 6px; }
+.play { margin-top: auto; align-self: flex-start; font-family: var(--pixel); font-size: 0.6rem; background: var(--pink); color: #fff; border: 3px solid var(--ink); padding: 10px 12px; text-shadow: 2px 2px 0 var(--ink); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Seminary Games</h1>
+  <p class="intro">Games for seminary class. Each one runs in the browser, so open it on the classroom projector and play.</p>
+  <ul class="games">
+    <li>
+      <a class="game" href="one-in-a-millennium/">
+        <span class="tag">Old Testament</span>
+        <h2>One in a Millennium</h2>
+        <p>A team trivia game where the rarest correct answers score the most. Includes Jeremiah–Joel and Doctrinal Mastery rounds.</p>
+        <span class="play">Play</span>
+      </a>
+    </li>
+  </ul>
+</main>
+</body>
+</html>

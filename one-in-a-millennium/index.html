@@ -1,0 +1,2046 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}img{max-width:100%}[hidden]{display:none!important}
+</style>
+<title>One in a Millennium</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
+<style>
+/* Layout: an 8-bit game board under a bright pixel sky. Chunky ink-outlined panels with hard drop shadows,
+   a pixel display face for headings, points and buttons, and a readable terminal face for answers.
+   One bright look on purpose: it stays punchy on a projector. */
+:root {
+  --sky: #4FC3F7;
+  --sky-deep: #2FA8E8;
+  --ink: #1B1035;
+  --paper: #FFFBEA;
+  --paper-2: #FFF0B8;
+  --muted: #5B4E7A;
+  --pink: #FF3D9A;
+  --yellow: #FFD23F;
+  --green: #5FD43A;
+  --blue: #2F8CFF;
+  --purple: #A66BFF;
+  --orange: #FF8A3D;
+  --red: #FF4B4B;
+  --t1: #FFFFFF;
+  --t2: #5FD43A;
+  --t3: #3FA9FF;
+  --t4: #B07CFF;
+  --t5: #FFD23F;
+  --pixel: "Press Start 2P", "Courier New", monospace;
+  --body: "VT323", "Consolas", "Courier New", monospace;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { background: var(--sky); color: var(--ink); }
+body {
+  font-family: var(--body); font-size: 23px; line-height: 1.2;
+  background:
+    linear-gradient(180deg, var(--sky-deep) 0 120px, var(--sky) 120px 100%);
+  min-height: 100%;
+}
+button, input, select { font: inherit; color: inherit; }
+.sky { position: absolute; inset: 0 0 auto 0; height: 260px; overflow: hidden; pointer-events: none; z-index: 0; }
+.cloud { position: absolute; width: 10px; height: 10px; }
+/* clouds stay on the right so they never sit behind the white title */
+.cloud.c1 { top: 18px; right: calc(4% + 110px); }
+.cloud.c2 { top: 150px; right: calc(30% + 110px); transform: scale(.7); transform-origin: 100% 0; }
+.cloud.c3 { top: 92px; right: calc(2% + 110px); transform: scale(1.15); transform-origin: 100% 0; }
+@media (max-width: 1000px) { .cloud.c1, .cloud.c2 { display: none; } }
+.wrap {
+  position: relative; z-index: 1;
+  max-width: 1200px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 56px;
+  display: flex; flex-direction: column; gap: 26px;
+}
+header.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.brand .logo { width: 40px; height: 40px; image-rendering: pixelated; flex: none; }
+.brand h1 { font-family: var(--pixel); font-weight: 400; font-size: clamp(0.95rem, 2.8vw, 1.5rem); margin: 0; line-height: 1.3; color: #fff; text-shadow: 3px 3px 0 var(--ink); letter-spacing: .02em; }
+.brand h1 span { color: var(--yellow); }
+.brand .eyebrow { color: var(--ink); background: var(--yellow); padding: 6px 8px; border: 3px solid var(--ink); }
+.eyebrow { font-family: var(--pixel); font-size: 0.55rem; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.btn {
+  font-family: var(--pixel); font-size: 0.62rem; text-transform: uppercase; letter-spacing: .02em; line-height: 1.3;
+  border: 3px solid var(--ink); background: #fff; color: var(--ink); border-radius: 0;
+  padding: 11px 14px; cursor: pointer; box-shadow: 4px 4px 0 var(--ink);
+  transition: transform .06s steps(1), box-shadow .06s steps(1);
+}
+.btn:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 var(--ink); }
+.btn:active { transform: translate(4px, 4px); box-shadow: 0 0 0 var(--ink); }
+.btn:focus-visible, input:focus-visible, select:focus-visible, .chk:focus-within, .seg button:focus-visible { outline: 3px dashed var(--pink); outline-offset: 4px; }
+.btn.primary { background: var(--pink); color: #fff; text-shadow: 2px 2px 0 var(--ink); }
+.btn.big { font-size: 0.85rem; padding: 16px 22px; box-shadow: 6px 6px 0 var(--ink); }
+.btn.big:active { transform: translate(6px, 6px); }
+.btn.ghost { background: var(--paper-2); }
+.btn.small { font-size: 0.5rem; padding: 8px 10px; box-shadow: 3px 3px 0 var(--ink); }
+.btn.small:active { transform: translate(3px, 3px); }
+.btn[disabled] { opacity: .45; cursor: not-allowed; transform: none; }
+
+.panel { background: var(--paper); border: 4px solid var(--ink); border-radius: 0; box-shadow: 6px 6px 0 var(--ink); padding: 20px; min-width: 0; }
+.panel h2 { font-family: var(--pixel); font-weight: 400; font-size: 0.85rem; margin: 0 0 10px; line-height: 1.4; text-transform: uppercase; }
+.panel .sub { color: var(--muted); margin: 0 0 16px; font-size: 1.05rem; }
+
+/* Setup */
+.setup { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 24px; }
+.setup-hero { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 28px; align-items: center; padding-block: 8px 4px; }
+.setup-hero .eyebrow { color: var(--ink); }
+.setup-hero h2 { font-family: var(--pixel); font-weight: 400; font-size: clamp(1.05rem, 2.6vw, 1.9rem); line-height: 1.5; margin: 10px 0 14px; color: #fff; text-shadow: 2px 2px 0 var(--ink); text-wrap: balance; }
+.setup-hero p { margin: 0; font-size: 1.35rem; max-width: 46ch; color: var(--ink); background: rgba(255,255,255,.55); padding: 10px 12px; border-left: 6px solid var(--ink); }
+.team-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+.team-row { display: flex; gap: 10px; align-items: center; }
+.swatch { width: 16px; height: 16px; flex: none; border: 3px solid var(--ink); display: inline-block; }
+.field { width: 100%; background: #fff; border: 3px solid var(--ink); border-radius: 0; padding: 6px 10px; min-width: 0; font-family: var(--body); font-size: 1.4rem; color: var(--ink); }
+.field::placeholder { color: #9A90B5; }
+.icon-btn { background: #fff; border: 3px solid var(--ink); color: var(--ink); width: 40px; height: 40px; cursor: pointer; font-family: var(--pixel); font-size: .8rem; flex: none; box-shadow: 3px 3px 0 var(--ink); }
+.icon-btn:active { transform: translate(3px, 3px); box-shadow: none; }
+.icon-btn[disabled] { opacity: .4; cursor: not-allowed; }
+.cat-group + .cat-group { margin-top: 26px; }
+.cat-group h3 { font-family: var(--pixel); font-weight: 400; font-size: 0.65rem; margin: 0 0 4px; line-height: 1.4; color: var(--pink); text-transform: uppercase; }
+.cat-group .row-between { margin-bottom: 12px; align-items: flex-end; }
+.cat-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.chk { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border: 3px solid var(--ink); cursor: pointer; background: #fff; }
+.chk:has(input:checked) { background: var(--paper-2); box-shadow: 3px 3px 0 var(--ink); }
+.chk input { margin-top: 4px; accent-color: var(--pink); width: 18px; height: 18px; flex: none; }
+.chk strong { display: block; font-size: 1.25rem; line-height: 1.1; font-weight: 400; }
+.chk small { color: var(--muted); font-size: 1rem; }
+.row-between { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.seg { display: inline-flex; border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); background: #fff; flex-wrap: wrap; }
+.seg button { background: transparent; border: 0; border-right: 3px solid var(--ink); padding: 10px 12px; cursor: pointer; font-family: var(--pixel); font-size: 0.55rem; color: var(--ink); }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--yellow); }
+.start-bar { grid-column: 1 / -1; display: flex; justify-content: flex-end; align-items: center; gap: 18px; flex-wrap: wrap; }
+.start-bar .note { font-size: 1.3rem; background: #fff; border: 3px solid var(--ink); padding: 4px 10px; }
+
+/* Scoring ladder */
+.gauge { display: flex; flex-direction: column; gap: 10px; }
+.gauge .lvl { display: grid; grid-template-columns: 28px 150px minmax(0,1fr) auto; align-items: center; gap: 10px; }
+.gauge .ico { width: 28px; height: 28px; display: block; }
+.gauge .ico svg { width: 100%; height: 100%; display: block; }
+.gauge .lbl { font-family: var(--pixel); font-size: 0.5rem; line-height: 1.4; text-transform: uppercase; }
+.gauge .bar { height: 18px; background: repeating-linear-gradient(90deg, var(--c) 0 12px, transparent 12px 15px); }
+.gauge .track { border: 3px solid var(--ink); background: #fff; padding: 2px; }
+.gauge .pts { font-family: var(--pixel); font-size: 0.7rem; min-width: 4ch; text-align: right; }
+.gauge-cap { color: var(--muted); font-size: 1.05rem; margin-top: 4px; }
+.bg-1 { --c: #CFC6E6; } .bg-2 { --c: var(--t2); } .bg-3 { --c: var(--t3); } .bg-4 { --c: var(--t4); } .bg-5 { --c: var(--t5); }
+
+/* Level chips (pixel icon injected per level) */
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px 4px 6px; font-family: var(--pixel); font-size: 0.48rem; line-height: 1.3; text-transform: uppercase; border: 2px solid var(--ink); background: #fff; color: var(--ink); white-space: nowrap; box-shadow: 2px 2px 0 var(--ink); }
+.chip::before { content: ""; display: none; width: 22px; height: 22px; background-color: var(--ink); background-size: 80% 80%; background-position: center; background-repeat: no-repeat; image-rendering: pixelated; flex: none; margin: -2px 0 -2px -2px; }
+.chip.tier-1 { background: var(--t1); } .chip.tier-2 { background: var(--t2); } .chip.tier-3 { background: var(--t3); }
+.chip.tier-4 { background: var(--t4); } .chip.tier-5 { background: var(--t5); }
+.chip.tier-1::before, .chip.tier-2::before, .chip.tier-3::before, .chip.tier-4::before, .chip.tier-5::before { display: block; }
+.chip.miss { background: var(--red); color: #fff; }
+.diff { font-family: var(--pixel); font-size: 0.48rem; text-transform: uppercase; color: var(--ink); background: var(--yellow); border: 2px solid var(--ink); padding: 4px 6px; }
+
+/* Stage */
+.stage { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px; align-items: start; }
+.stage.solo { grid-template-columns: minmax(0, 1fr); }
+.main-col { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+.prompt-card { padding: 26px; background: #fff; position: relative; }
+.prompt-card::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 8px; background: repeating-linear-gradient(90deg, var(--pink) 0 16px, var(--yellow) 16px 32px, var(--green) 32px 48px, var(--blue) 48px 64px, var(--purple) 64px 80px); }
+.prompt-meta { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+.prompt-meta .eyebrow { color: var(--pink); }
+.panel h2.prompt { font-family: var(--pixel); font-weight: 400; font-size: clamp(0.95rem, 2.2vw, 1.55rem); line-height: 1.6; margin: 0; text-wrap: balance; text-transform: none; }
+.prompt-note { color: var(--muted); margin: 14px 0 6px; font-size: 1.3rem; }
+.prompt-wrap { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: center; }
+.timer { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.clock { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 12px; background: var(--ink); border: 4px solid var(--ink); box-shadow: 4px 4px 0 rgba(27,16,53,.35); }
+.clock .num { font-family: var(--pixel); font-size: 2.2rem; color: var(--yellow); line-height: 1; font-variant-numeric: tabular-nums; min-width: 3ch; text-align: center; }
+.segs { display: grid; grid-template-columns: repeat(10, 10px); gap: 3px; }
+.segs i { width: 10px; height: 10px; background: #3A2D5C; }
+.segs i.on { background: var(--green); }
+.clock.low .segs i.on { background: var(--orange); }
+.clock.low .num { color: var(--orange); }
+.clock.done .num { color: var(--red); animation: blink .5s steps(2) 6; }
+.timer .ctrls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.entry-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+.entry label { display: flex; align-items: center; gap: 8px; font-size: 1.3rem; margin-bottom: 6px; }
+.masked { -webkit-text-security: disc; text-security: disc; }
+.entry-foot { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 18px; }
+
+/* Scoreboard */
+.scores { background: var(--ink); color: #fff; }
+.scores h2 { color: var(--yellow); margin-bottom: 14px; }
+.score-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.score-list li { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 10px; background: #2B1F4D; border: 3px solid #fff; }
+.score-list li.lead { background: var(--yellow); color: var(--ink); border-color: var(--yellow); }
+.score-list li .swatch { border-color: #fff; }
+.score-list li.lead .swatch { border-color: var(--ink); }
+.score-list .nm { font-size: 1.3rem; overflow-wrap: anywhere; }
+.score-list .sc { font-family: var(--pixel); font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+.progress-dots { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 16px; }
+.progress-dots i { width: 14px; height: 14px; background: #3A2D5C; }
+.progress-dots i.on { background: var(--green); }
+.progress-dots i.now { background: var(--yellow); }
+
+/* Reveal */
+.reveal-list { display: flex; flex-direction: column; gap: 14px; }
+.rv { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 14px 16px; background: #fff; border: 4px solid var(--ink); border-left: 14px solid var(--team, var(--ink)); box-shadow: 5px 5px 0 var(--ink); }
+.rv .who { font-family: var(--pixel); font-size: 0.5rem; text-transform: uppercase; color: var(--muted); }
+.rv .said { font-size: 2.1rem; line-height: 1.05; overflow-wrap: anywhere; margin-top: 6px; }
+.rv .said.blank { color: var(--muted); font-size: 1.5rem; }
+.rv .detail { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-top: 8px; font-size: 1.2rem; }
+.ref { font-family: var(--body); font-size: 1.15rem; color: var(--ink); background: var(--paper-2); padding: 0 6px; border: 2px solid var(--ink); }
+.rv .pts { font-family: var(--pixel); font-size: 1.4rem; text-align: right; line-height: 1; color: var(--pink); text-shadow: 2px 2px 0 var(--ink); }
+.rv .pts small { display: block; font-size: 0.45rem; color: var(--muted); margin-top: 8px; text-shadow: none; }
+.rv .side { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+.rv .btns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.rv.top { background: repeating-linear-gradient(45deg, #FFF6C8 0 12px, #FFEFA0 12px 24px); }
+.lvl-select { background: #fff; border: 3px solid var(--ink); border-radius: 0; padding: 7px 8px; font-family: var(--pixel); font-size: 0.48rem; cursor: pointer; max-width: 100%; box-shadow: 3px 3px 0 var(--ink); color: var(--ink); }
+.fix { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+.fix .field { flex: 1 1 220px; font-size: 1.8rem; }
+.note-txt { color: var(--muted); }
+.why { flex-basis: 100%; color: var(--ink); font-size: 1.25rem; }
+.why::before { content: "Why it helps: "; color: var(--pink); }
+.why.matters::before { content: "Why it matters: "; }
+.anim .rv { animation: pop .45s steps(5) both; animation-delay: calc(var(--i) * 450ms); }
+.missed { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+.missed .m { padding: 10px; border: 3px solid var(--ink); background: #fff; display: flex; flex-direction: column; gap: 6px; }
+.missed .m b { font-size: 1.35rem; font-weight: 400; }
+.full-list { margin-top: 16px; display: flex; flex-direction: column; gap: 14px; }
+.full-list .grp { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 1.2rem; }
+.full-list .grp b { color: var(--pink); }
+.nav-foot { display: flex; justify-content: flex-end; gap: 12px; flex-wrap: wrap; }
+
+/* The climb */
+.climb-wrap { display: flex; flex-direction: column; gap: 20px; }
+.climb-panel { display: flex; flex-direction: column; gap: 14px; }
+#climb { display: block; width: min(100%, calc(70vh * 1.6)); height: auto; aspect-ratio: 16 / 10; margin: 0 auto; image-rendering: pixelated; image-rendering: crisp-edges; border: 4px solid var(--ink); background: #0B0620; }
+.climb-key { margin: 0; text-align: center; font-size: 1.15rem; color: var(--muted); }
+
+/* Final */
+.final { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 24px; }
+.final h2.win { font-family: var(--pixel); font-weight: 400; font-size: clamp(1rem, 2.4vw, 1.5rem); line-height: 1.5; margin: 10px 0 18px; color: var(--pink); text-shadow: 3px 3px 0 var(--ink); }
+.podium { display: flex; flex-direction: column; gap: 10px; }
+.pod { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 12px 14px; background: #fff; border: 4px solid var(--ink); border-left: 14px solid var(--team); }
+.pod .rank { font-family: var(--pixel); font-size: 1.3rem; color: var(--muted); }
+.pod.first { background: var(--yellow); box-shadow: 5px 5px 0 var(--ink); }
+.pod.first .rank { color: var(--ink); }
+.pod .nm { font-size: 1.8rem; overflow-wrap: anywhere; }
+.pod .sc { font-family: var(--pixel); font-size: 1.1rem; }
+.best { display: flex; flex-direction: column; gap: 12px; }
+.best .big { font-family: var(--pixel); font-size: clamp(1rem, 2.2vw, 1.4rem); line-height: 1.5; color: var(--ink); background: var(--yellow); border: 3px solid var(--ink); padding: 10px 12px; overflow-wrap: anywhere; }
+
+/* Answer key */
+dialog { background: var(--paper); color: var(--ink); border: 4px solid var(--ink); border-radius: 0; box-shadow: 8px 8px 0 var(--ink); padding: 0; width: min(900px, calc(100vw - 32px)); max-height: calc(100vh - 48px); }
+dialog::backdrop { background: rgba(27, 16, 53, .6); }
+.dlg-head { position: sticky; top: 0; background: var(--ink); color: #fff; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; gap: 12px; z-index: 1; }
+.dlg-head h2 { font-family: var(--pixel); font-weight: 400; margin: 0; font-size: 0.9rem; color: var(--yellow); }
+.dlg-body { padding: 8px 20px 24px; }
+.key-section { font-family: var(--pixel); font-weight: 400; font-size: 0.7rem; margin: 24px 0 6px; color: var(--pink); text-transform: uppercase; }
+details.key { border-bottom: 3px dashed var(--ink); padding: 12px 0; }
+details.key summary { cursor: pointer; font-size: 1.4rem; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.key-tier { margin: 14px 0 6px; }
+.key-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px 16px; }
+.key-items div { font-size: 1.2rem; }
+.key-items .alt { display: block; color: var(--muted); font-size: 1rem; }
+.key-miss { margin-top: 12px; font-size: 1.1rem; color: var(--muted); }
+.key-miss b { color: var(--ink); font-weight: 400; }
+
+@keyframes pop { 0% { opacity: 0; transform: translateY(16px) scale(.9); } 100% { opacity: 1; transform: none; } }
+@keyframes blink { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .anim .rv, .clock.done .num { animation: none; }
+}
+@media (max-width: 900px) {
+  .stage, .final, .setup, .setup-hero { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 560px) {
+  body { font-size: 21px; }
+  .cat-list { grid-template-columns: minmax(0, 1fr); }
+  .prompt-wrap { grid-template-columns: minmax(0, 1fr); }
+  .prompt-card { padding: 18px; }
+  .gauge .lvl { grid-template-columns: 24px 112px minmax(0,1fr) auto; gap: 8px; }
+  .gauge .ico { width: 24px; height: 24px; }
+  .gauge .lbl { font-size: 0.42rem; }
+  .rv .said { font-size: 1.6rem; }
+  .brand .eyebrow { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="sky" aria-hidden="true"><i class="cloud c1"></i><i class="cloud c2"></i><i class="cloud c3"></i></div>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <span class="logo" id="logo" aria-hidden="true"></span>
+      <h1>One in a <span>Millennium</span></h1>
+      <span class="eyebrow">Old Testament edition</span>
+    </div>
+    <div class="actions">
+      <button class="btn ghost" id="btn-key" type="button">Answer key</button>
+      <button class="btn ghost" id="btn-end" type="button" hidden>End game</button>
+    </div>
+  </header>
+  <main id="app"></main>
+</div>
+
+<dialog id="key-dlg" aria-labelledby="key-title">
+  <div class="dlg-head">
+    <h2 id="key-title">Answer key</h2>
+    <button class="btn small" type="button" id="key-close">Close</button>
+  </div>
+  <div class="dlg-body" id="key-body"></div>
+</dialog>
+
+<script>
+/* ---------- Content ----------
+   Answer format:  "Display|level|reference|alias;alias"
+   Near-miss format: "Display|reference|why it doesn't count|alias;alias"
+   Levels: 1 Sheep, 2 Seminary Student, 3 Disciple, 4 Prophet, 5 1 in a Millennium. */
+const TIERS = {
+  1: { name: "Sheep", pts: 10 },
+  2: { name: "Seminary Student", pts: 25 },
+  3: { name: "Disciple", pts: 50 },
+  4: { name: "Prophet", pts: 75 },
+  5: { name: "1 in a Millennium", pts: 100 }
+};
+const GROUPS = [
+  { id: "study", title: "Jeremiah through Joel", sub: "Jeremiah, Lamentations, Ezekiel, Daniel, Hosea and Joel." },
+  { id: "dm", title: "Doctrinal Mastery", sub: "Situations with a friend. Teams pick an Old Testament Doctrinal Mastery passage that would help." },
+  { id: "ot", title: "Whole Old Testament", sub: "General categories from across the Old Testament." }
+];
+
+/* ---------- Doctrinal Mastery: situation rounds ----------
+   Each passage: [name, reference, accepted wording, what it teaches].
+   Each situation lists the passages that fit, a level, and why it helps.
+   Every other passage is still recognized, and its teaching is shown so the leader can decide. */
+const DM = {
+  m139: ["God's work and glory", "Moses 1:39", "moses 1 39;moses 1;work and my glory;work and glory;immortality and eternal life;eternal life;immortality;gods work;gods plan;plan of salvation", "God's work is our immortality and eternal life"],
+  m718: ["Zion: one heart and one mind", "Moses 7:18", "moses 7 18;moses 7;zion;one heart;one mind;one heart and one mind;no poor;no poor among them;unity", "Zion's people were of one heart and one mind, with no poor among them"],
+  a29: ["Abraham's seed bears the priesthood to all nations", "Abraham 2:9–11", "abraham 2 9;abraham 2 10;abraham 2 11;abraham 2;abrahamic covenant;covenant of abraham;abrahams seed;seed of abraham;priesthood unto all nations;bear this ministry;all nations;blessings of abraham;priesthood;covenant", "Abraham's seed will bless all nations with the gospel and priesthood"],
+  a322: ["Organized before the world was", "Abraham 3:22–23", "abraham 3 22;abraham 3 23;abraham 3;premortal;pre mortal;premortal life;pre earth life;organized before the world;noble and great;noble and great ones;spirits;intelligences;lived before", "We lived as spirits before this life"],
+  g126: ["Created in God's image", "Genesis 1:26–27", "genesis 1 26;genesis 1 27;genesis 1;image of god;in his own image;own image;gods image;likeness;image;child of god;children of god;divine nature", "We are created in God's image"],
+  g224: ["A man shall cleave unto his wife", "Genesis 2:24", "genesis 2 24;genesis 2;cleave;cleave unto his wife;marriage;married;husband and wife;one flesh;leave father and mother", "Husband and wife are to become one"],
+  g399: ["How can I do this great wickedness?", "Genesis 39:9", "genesis 39 9;genesis 39;great wickedness;joseph;potiphars wife;joseph and potiphars wife;flee;fled;ran away;run away;chastity;law of chastity;resist temptation;temptation", "Joseph refused to sin against God and fled temptation"],
+  ex20: ["The Ten Commandments", "Exodus 20:3–17", "exodus 20 3;exodus 20;ten commandments;commandments;thou shalt not;keep the commandments", "God's basic commandments"],
+  j2415: ["Choose you this day whom ye will serve", "Joshua 24:15", "joshua 24 15;joshua 24;joshua;choose you this day;choose this day;choose;as for me and my house;me and my house;serve the lord", "Choose today whom you will serve"],
+  ps24: ["Clean hands and a pure heart", "Psalm 24:3–4", "psalm 24 3;psalm 24 4;psalm 24;clean hands;pure heart;clean hands and a pure heart;holy place;hill of the lord;worthiness;worthy;temple", "Clean hands and a pure heart let us stand in holy places"],
+  p35: ["Trust in the Lord with all thine heart", "Proverbs 3:5–6", "proverbs 3 5;proverbs 3 6;proverbs 3;trust in the lord;trust;lean not;own understanding;direct thy paths;direct your paths", "Trust the Lord and He will direct your paths"],
+  i118: ["Sins as scarlet, white as snow", "Isaiah 1:18", "isaiah 1 18;isaiah 1;scarlet;white as snow;red like crimson;crimson;wool;reason together;forgiveness;forgiven;forgive", "The Lord can make any sin clean"],
+  i520: ["Woe unto them that call evil good", "Isaiah 5:20", "isaiah 5 20;isaiah 5;call evil good;evil good;good evil;good and evil;woe;woe unto them", "Calling evil good doesn't make it good"],
+  i2913: ["A marvellous work and a wonder", "Isaiah 29:13–14", "isaiah 29 13;isaiah 29 14;isaiah 29;marvellous work;marvelous work;marvelous work and a wonder;a wonder;restoration;restoration of the gospel;draw near with their mouth;honour me with their lips", "The Lord promised to restore His gospel"],
+  i53: ["He hath borne our griefs", "Isaiah 53:3–5", "isaiah 53 3;isaiah 53 4;isaiah 53 5;isaiah 53;borne our griefs;griefs;sorrows;carried our sorrows;man of sorrows;stripes;with his stripes;wounded for our transgressions;despised and rejected;atonement;jesus christ;jesus;christ;savior;saviour", "Jesus Christ carried our griefs, sorrows and sins"],
+  i586: ["The blessings of a proper fast", "Isaiah 58:6–7", "isaiah 58 6;isaiah 58 7;fast;fasting;fast offering;fast offerings;proper fast;law of the fast;feed the hungry;loose the bands", "A proper fast frees the burdened and feeds the hungry"],
+  i5813: ["Call the Sabbath a delight", "Isaiah 58:13–14", "isaiah 58 13;isaiah 58 14;sabbath;sabbath a delight;sabbath day;keep the sabbath;holy day;delight;sunday", "Make the Sabbath a delight and the Lord blesses you"],
+  j14: ["Before I formed thee in the belly", "Jeremiah 1:4–5", "jeremiah 1 4;jeremiah 1 5;jeremiah 1;jeremiah;foreordained;foreordination;before i formed thee;formed thee;in the belly;ordained thee;ordained a prophet;prophet unto the nations", "God knew us and gave us a purpose before we were born"],
+  e316: ["The prophet is a watchman", "Ezekiel 3:16–17", "ezekiel 3 16;ezekiel 3 17;ezekiel 3;watchman;watchman unto the house of israel;prophets warn;warn;warning;prophet;prophets", "God sends prophets to warn us"],
+  e3715: ["The stick of Judah and the stick of Joseph", "Ezekiel 37:15–17", "ezekiel 37 15;ezekiel 37 16;ezekiel 37 17;ezekiel 37;sticks;stick;two sticks;stick of judah;stick of joseph;bible and book of mormon;book of mormon;bible;one in thine hand", "The Bible and the Book of Mormon become one"],
+  d244: ["A kingdom which shall never be destroyed", "Daniel 2:44–45", "daniel 2 44;daniel 2 45;daniel 2;daniel;kingdom;never be destroyed;kingdom of god;stone;stone cut out;stone cut without hands;mountain;filled the earth;fill the earth;the church;church", "God's latter-day kingdom will fill the earth and never be destroyed"]
+};
+const DM_SITUATIONS = [
+  { id: "dm-discouraged", title: "A discouraged friend", diff: "Easy",
+    situation: "A friend feels discouraged, like they don't matter",
+    fits: [
+      ["m139", 1, "Their eternal life is God's whole work and glory."],
+      ["g126", 1, "They're a child of God, created in His image."],
+      ["i53", 2, "The Savior has already carried their griefs and sorrows."],
+      ["j14", 2, "God knew them and had a purpose for them before they were born."],
+      ["p35", 2, "They can trust the Lord to direct their path, even when it's hard."],
+      ["a322", 3, "They lived with God before this life, among the noble and great."],
+      ["i118", 4, "If mistakes are weighing on them, no sin is too dark for the Lord to make clean."]
+    ] },
+  { id: "dm-forgiven", title: "A friend who feels unforgivable", diff: "Easy",
+    situation: "A friend made a serious mistake and thinks God could never forgive them",
+    fits: [
+      ["i118", 1, "Even sins like scarlet can become white as snow."],
+      ["i53", 1, "The Savior already bore their sins. With His stripes we are healed."],
+      ["m139", 3, "God's work is to bring them to eternal life, not to give up on them."],
+      ["ps24", 3, "Through repentance they can have clean hands and a pure heart again."],
+      ["j2415", 4, "They can choose today to turn back and serve the Lord."],
+      ["g126", 4, "They're still a child of God, created in His image."]
+    ] },
+  { id: "dm-pressure", title: "Pressure at a party", diff: "Easy",
+    situation: "A friend is being pressured to do something wrong at a party",
+    fits: [
+      ["g399", 1, "Joseph said no and got out: how can I sin against God?"],
+      ["j2415", 1, "Decide now whom you will serve."],
+      ["ex20", 2, "God's commandments are clear, and they protect us."],
+      ["ps24", 3, "Clean hands and a pure heart let us stand in holy places."],
+      ["i520", 3, "Friends may call it good, but that doesn't make it good."],
+      ["p35", 4, "Trust the Lord's way over your own understanding in the moment."]
+    ] },
+  { id: "dm-opinion", title: "\"It's just your opinion\"", diff: "Medium",
+    situation: "A friend says right and wrong are just a matter of opinion",
+    fits: [
+      ["i520", 1, "Calling evil good doesn't make it good."],
+      ["ex20", 1, "God gave clear commandments about right and wrong."],
+      ["e316", 2, "God sends prophets as watchmen to warn us about what's wrong."],
+      ["j2415", 3, "We each still have to choose whom we will serve."],
+      ["p35", 3, "Lean on God's understanding, not just our own."],
+      ["g399", 4, "Joseph saw sin as being against God, not just a personal choice."]
+    ] },
+  { id: "dm-prophets", title: "Why prophets?", diff: "Medium",
+    situation: "A friend asks why we need prophets today",
+    fits: [
+      ["e316", 1, "A prophet is a watchman who sees danger and warns the people."],
+      ["j14", 1, "God calls and ordains prophets, even before they're born."],
+      ["a322", 3, "The noble and great ones were chosen to lead before the world was."],
+      ["i2913", 3, "The Lord promised a marvellous work through a restoration."],
+      ["d244", 3, "God's kingdom would be set up again in the last days and never be destroyed."],
+      ["a29", 4, "Abraham's seed carries the priesthood to all nations."]
+    ] },
+  { id: "dm-bom", title: "Why the Book of Mormon?", diff: "Medium",
+    situation: "A friend asks why we need the Book of Mormon when we already have the Bible",
+    fits: [
+      ["e3715", 1, "The stick of Judah (Bible) and stick of Joseph (Book of Mormon) become one."],
+      ["i2913", 2, "The Restoration, including new scripture, is a marvellous work and a wonder."],
+      ["d244", 3, "God's latter-day kingdom will roll forth to fill the earth."],
+      ["a29", 4, "God's covenant with Abraham reaches all nations, including the people in the Book of Mormon."]
+    ] },
+  { id: "dm-sabbath", title: "A boring Sunday", diff: "Easy",
+    situation: "A friend thinks Sunday is boring and pointless",
+    fits: [
+      ["i5813", 1, "Call the Sabbath a delight, and the Lord promises blessings."],
+      ["ex20", 1, "Remember the Sabbath day to keep it holy."],
+      ["i586", 3, "Fast Sunday is a chance to lift others."],
+      ["ps24", 4, "The Sabbath helps us prepare to stand in holy places."],
+      ["j2415", 4, "How we spend the Lord's day shows whom we choose to serve."]
+    ] },
+  { id: "dm-fast", title: "Why fast?", diff: "Medium",
+    situation: "A friend wonders why we fast and give fast offerings",
+    fits: [
+      ["i586", 1, "A proper fast frees the burdened and feeds the hungry."],
+      ["m718", 2, "Zion had no poor among them."],
+      ["i5813", 3, "Fast Sunday is part of making the Sabbath about the Lord, not ourselves."],
+      ["i53", 4, "The Savior carried others' burdens, and fasting lets us help carry them too."],
+      ["g126", 4, "Everyone we help is a child of God."]
+    ] },
+  { id: "dm-decision", title: "A big decision", diff: "Easy",
+    situation: "A friend is anxious about a big decision, like college or a mission",
+    fits: [
+      ["p35", 1, "Trust the Lord, and He will direct your paths."],
+      ["j2415", 1, "Choose first whom you'll serve, and other choices get clearer."],
+      ["j14", 2, "God has known them and their purpose all along."],
+      ["a322", 3, "They were prepared for this life before they were born."],
+      ["m139", 3, "God's whole work is their eternal life, so He cares about their path."],
+      ["d244", 4, "God's work rolls forward, and they can be part of it."]
+    ] },
+  { id: "dm-dating", title: "Dating and marriage", diff: "Medium",
+    situation: "A friend wonders why the Church cares so much about chastity and marriage",
+    fits: [
+      ["g224", 1, "Husband and wife are meant to become one."],
+      ["g399", 1, "Joseph kept himself clean: how can I sin against God?"],
+      ["ps24", 2, "Clean hands and a pure heart prepare us for the temple."],
+      ["g126", 3, "Male and female are both created in God's image."],
+      ["m139", 3, "Eternal life includes eternal families."],
+      ["a29", 4, "The covenant with Abraham promises eternal posterity."],
+      ["m718", 5, "A marriage can be a little Zion: one heart and one mind."]
+    ] },
+  { id: "dm-premortal", title: "Where did we come from?", diff: "Medium",
+    situation: "A friend asks where we came from before we were born",
+    fits: [
+      ["a322", 1, "We were spirits organized before the world was."],
+      ["j14", 1, "God knew Jeremiah before he was born."],
+      ["g126", 2, "We're God's children, created in His image."],
+      ["m139", 3, "God's plan is for our immortality and eternal life."]
+    ] },
+  { id: "dm-sharing", title: "Nervous to share the gospel", diff: "Medium",
+    situation: "A friend is nervous about sharing the gospel",
+    fits: [
+      ["j14", 1, "The Lord prepared them before they were born, and He told Jeremiah, “I am with thee” (Jeremiah 1:8)."],
+      ["e316", 1, "Like a watchman, we're called to share what we know."],
+      ["a29", 2, "Abraham's seed carries the gospel to all nations, and that includes them."],
+      ["d244", 2, "God's kingdom will fill the earth, and they get to help it roll forth."],
+      ["i2913", 3, "They're sharing a marvellous work and a wonder."],
+      ["e3715", 3, "The Book of Mormon can do much of the teaching for them."],
+      ["p35", 3, "They can trust the Lord to direct the conversation."],
+      ["m139", 4, "Sharing the gospel is part of God's own work: bringing eternal life."]
+    ] }
+];
+const DM_OTHER = [
+  "Isaiah 58|Isaiah 58:6–7, 13–14|Isaiah 58 has two passages: the fast (verses 6–7) and the Sabbath (verses 13–14). Fix the answer to say which.|isaiah 58",
+  "Abraham|Abraham 2 and 3|There are two passages in Abraham: chapter 2 (priesthood to all nations) and chapter 3 (organized before the world). Fix the answer to say which.|abraham",
+  "Moses|Moses 1 and 7|There are two passages in Moses: 1:39 (work and glory) and 7:18 (Zion). Fix the answer to say which.|moses",
+  "Genesis|Genesis 1, 2 and 39|There are three passages in Genesis. Fix the answer to say which.|genesis",
+  "Isaiah|Isaiah 1, 5, 29, 53 and 58|There are six passages in Isaiah. Fix the answer to say which.|isaiah",
+  "Ezekiel|Ezekiel 3 and 37|There are two passages in Ezekiel: the watchman (3:16–17) and the two sticks (37:15–17). Fix the answer to say which.|ezekiel",
+  "1 Nephi 3:7|Book of Mormon|A Book of Mormon passage, not Old Testament Doctrinal Mastery. Count it if it fits.|1 nephi 3 7;i will go and do;go and do",
+  "Mosiah 2:17|Book of Mormon|A Book of Mormon passage, not Old Testament Doctrinal Mastery. Count it if it fits.|mosiah 2 17;in the service of your fellow beings",
+  "Moroni 10:4–5|Book of Mormon|A Book of Mormon passage, not Old Testament Doctrinal Mastery. Count it if it fits.|moroni 10 4;moroni 10 5;moronis promise",
+  "John 3:16|New Testament|A New Testament passage, not Old Testament Doctrinal Mastery. Count it if it fits.|john 3 16;god so loved the world"
+];
+const DM_CATS = DM_SITUATIONS.map(s => {
+  const used = new Set(s.fits.map(f => f[0]));
+  return {
+    id: s.id, group: "dm", title: s.title, diff: s.diff, mode: "kw", refs: true,
+    prompt: `${s.situation}. Which Doctrinal Mastery passage could you share?`,
+    note: "Give the reference or what it teaches. Less obvious fits score higher.",
+    a: s.fits.map(([k, t, why]) => { const p = DM[k]; return `${p[0]}|${t}|${p[1]}|${p[2]}|${why}`; }),
+    n: Object.keys(DM).filter(k => !used.has(k)).map(k => {
+      const p = DM[k];
+      return `${p[0]}|${p[1]}|${p[3]}. Not the usual fit here, so count it if the team can explain how it helps.|${p[2]}`;
+    }).concat(DM_OTHER)
+  };
+});
+
+const RAW = [
+  /* ===== Jeremiah through Joel ===== */
+  {
+    id: "jer-people", group: "study", title: "People in Jeremiah", diff: "Hard", mode: "name",
+    prompt: "Name a person who appears in the book of Jeremiah",
+    note: "Kings, prophets, friends and enemies of Jeremiah.",
+    a: [
+      "Jeremiah|1|Jeremiah 1:1|jeremias",
+      "The Lord|1|Jeremiah 1:4|god;lord;the lord;jehovah;yahweh;heavenly father",
+      "Zedekiah|1|Jeremiah 21:1|",
+      "Nebuchadnezzar|1|Jeremiah 21:2|nebuchadrezzar;nebakanezer;nebuchadnezer",
+      "Baruch|1|Jeremiah 36:4|",
+      "Pharaoh|3|Jeremiah 44:30; 46:2|pharaoh hophra;pharaoh necho;pharaoh neco;hophra",
+      "Jehoiakim|3|Jeremiah 36:1|",
+      "Josiah|3|Jeremiah 1:2|",
+      "Hananiah (false prophet)|3|Jeremiah 28:1|hananiah",
+      "Ebed-melech|4|Jeremiah 38:7|ebedmelech;ebed melech",
+      "Gedaliah|4|Jeremiah 40:5|",
+      "Rachel|4|Jeremiah 31:15|",
+      "Pashhur|4|Jeremiah 20:1|pashur",
+      "Hilkiah (Jeremiah's father)|4|Jeremiah 1:1|hilkiah",
+      "Jeconiah / Coniah|4|Jeremiah 22:24; 24:1|jeconiah;coniah;jehoiachin",
+      "Ishmael son of Nethaniah|5|Jeremiah 41:2|ishmael",
+      "Johanan|5|Jeremiah 40:8|",
+      "Nebuzaradan|5|Jeremiah 39:9|",
+      "Hanamel (Jeremiah's cousin)|5|Jeremiah 32:7|hanamel;hanameel",
+      "Jehudi|5|Jeremiah 36:21|",
+      "Jaazaniah|5|Jeremiah 35:3|",
+      "Jonadab son of Rechab|5|Jeremiah 35:6|jonadab;jehonadab;rechab",
+      "Ahikam|5|Jeremiah 26:24|",
+      "Uriah the prophet|5|Jeremiah 26:20|uriah;urijah"
+    ],
+    n: [
+      "Daniel|Daniel 1:6|Daniel lived at the same time, but he isn't named in Jeremiah.|",
+      "Ezekiel|Ezekiel 1:3|Ezekiel lived at the same time, but he isn't named in Jeremiah.|"
+    ]
+  },
+  {
+    id: "jer-images", group: "study", title: "Jeremiah's images and sayings", diff: "Medium", mode: "kw",
+    prompt: "Name an object lesson, image or famous saying from Jeremiah",
+    note: "Things Jeremiah did, saw or said to teach the people.",
+    a: [
+      "The potter and the clay|1|Jeremiah 18:1–6|potter;clay;potters house;potters wheel",
+      "\"I know the plans I have for you\"|1|Jeremiah 29:11|plans;i know the plans;plans to prosper;hope and a future;future and a hope;expected end;thoughts of peace;29 11",
+      "\"Before I formed thee in the belly I knew thee\"|1|Jeremiah 1:5|formed thee;formed you;knew thee;knew you;in the womb;in the belly;before you were born;foreordained;foreordination;ordained a prophet",
+      "Seventy years of captivity in Babylon|1|Jeremiah 25:11; 29:10|seventy years;70 years;captivity;babylon;exile;babylonian captivity;taken captive",
+      "Thrown into a muddy pit|1|Jeremiah 38:6|pit;dungeon;mud;mire;muddy pit;thrown in a pit;thrown in a cistern;into a cistern;in a cistern;into the cistern;into a pit;into the pit;into the dungeon;thrown in a well;well;prison;jail",
+      "The weeping prophet|1|Jeremiah 9:1|weeping;weep;tears;crying;cried;weeping prophet;fountain of tears",
+      "New covenant written on their hearts|1|Jeremiah 31:31–33|new covenant;covenant;write it in their hearts;written on their hearts;written on hearts;law in their hearts;heart;hearts",
+      "The yoke|2|Jeremiah 27:2|yoke;yokes;wooden yoke;iron yoke;bands and yokes",
+      "Fire shut up in my bones|3|Jeremiah 20:9|fire in my bones;fire shut up;burning fire;fire in his bones;fire",
+      "Balm in Gilead|3|Jeremiah 8:22|balm;gilead;balm in gilead",
+      "Fishers and hunters|3|Jeremiah 16:16|fishers;hunters;fishermen;fish;hunt;fishers and hunters",
+      "One of a city, two of a family|3|Jeremiah 3:14|one of a city;two of a family;gather;gathering;gathering of israel",
+      "The broken clay jar|3|Jeremiah 19:1–11|jar;clay jar;bottle;earthen bottle;broken pot;broken jar;smashed jar;broke a jar;flask",
+      "The burned scroll|3|Jeremiah 36:23|scroll;burned scroll;burned the scroll;roll;book burned;penknife",
+      "The ruined linen belt|4|Jeremiah 13:1–11|belt;girdle;linen;linen belt;loincloth;sash;waistband",
+      "Can the leopard change his spots?|4|Jeremiah 13:23|leopard;spots;ethiopian;change his skin",
+      "Broken cisterns and living water|4|Jeremiah 2:13|cistern;cisterns;broken cisterns;living water;living waters;fountain of living waters",
+      "Two baskets of figs|4|Jeremiah 24:1–10|fig;figs;baskets;basket of figs;good and bad figs",
+      "Rachel weeping for her children|4|Jeremiah 31:15|rachel;rachel weeping;weeping for her children;ramah",
+      "The almond branch|4|Jeremiah 1:11|almond;almond tree;almond rod;almond branch",
+      "The boiling pot|5|Jeremiah 1:13|boiling pot;seething pot;cauldron;pot",
+      "Buying the field at Anathoth|5|Jeremiah 32:6–15|field;bought a field;buying a field;deed;deeds;anathoth",
+      "The Rechabites refuse wine|5|Jeremiah 35:1–19|rechabites;rechab;wine;refused wine",
+      "Put in the stocks|5|Jeremiah 20:2|stocks;in the stocks"
+    ],
+    n: []
+  },
+  {
+    id: "lamentations", group: "study", title: "Lamentations", diff: "Hard", mode: "kw",
+    prompt: "Name a theme, image or phrase from Lamentations",
+    note: "Five poems mourning the fall of Jerusalem.",
+    a: [
+      "His mercies are new every morning|1|Lamentations 3:22–23|new every morning;great is thy faithfulness;great is your faithfulness;faithfulness;mercies;compassions;compassion;mercy;steadfast love",
+      "The destruction of Jerusalem|1|Lamentations 1:1–8|jerusalem destroyed;destruction;fall of jerusalem;babylon;jerusalem;destroyed;temple destroyed;zion",
+      "Weeping and mourning|1|Lamentations 1:2, 16|weeping;weep;tears;crying;mourning;sorrow;grief;sadness;lament",
+      "Jeremiah, the traditional author|1|Lamentations (tradition)|jeremiah;written by jeremiah",
+      "Captivity and exile|1|Lamentations 1:3|captivity;exile;exiled;captive;taken captive;scattered",
+      "Sin and its consequences|1|Lamentations 1:8; 5:16|sin;sins;punishment;judgment;consequences;wickedness;disobedience",
+      "Hope|1|Lamentations 3:21|hope;therefore have i hope;still have hope",
+      "The city sits like a widow|3|Lamentations 1:1|widow;like a widow;lonely city;city sits solitary;sits alone",
+      "The Lord is my portion|3|Lamentations 3:24|my portion;portion;the lord is my portion;hope in him",
+      "Wait quietly for the Lord|4|Lamentations 3:25–26|wait;waiting;wait quietly;good to wait;quietly",
+      "Bear the yoke in youth|4|Lamentations 3:27|yoke;bear the yoke;yoke in his youth;youth",
+      "Is it nothing to you, all who pass by?|4|Lamentations 1:12|is it nothing to you;pass by;all ye that pass by;all who pass by",
+      "Renew our days as of old|4|Lamentations 5:21|renew our days;turn us;restore us;renew;restore",
+      "Hungry children|5|Lamentations 2:11–12; 4:4|children;hungry children;starving;famine;hunger;bread;infants",
+      "The crown has fallen|5|Lamentations 5:16|crown;crown is fallen;crown has fallen",
+      "Alphabet poems (acrostics)|5|Lamentations 1–4|acrostic;acrostics;alphabet;hebrew alphabet;alphabetical;poem;poems;poetry"
+    ],
+    n: []
+  },
+  {
+    id: "ezekiel", group: "study", title: "Ezekiel's visions and signs", diff: "Hard", mode: "kw",
+    prompt: "Name a vision, symbol or teaching from Ezekiel",
+    note: "What Ezekiel saw, acted out or taught.",
+    a: [
+      "Valley of dry bones|1|Ezekiel 37:1–14|dry bones;bones;valley of bones;valley of dry bones;skeletons;bones live",
+      "Stick of Judah and stick of Joseph|1|Ezekiel 37:15–17|stick;sticks;two sticks;stick of judah;stick of joseph;stick of ephraim",
+      "The watchman|1|Ezekiel 3:17; 33:7|watchman;watchmen;watchman on the tower;warn;warning",
+      "A new heart and a new spirit|1|Ezekiel 36:26|new heart;heart of flesh;stony heart;heart of stone;new spirit;heart",
+      "Wheel in a wheel|2|Ezekiel 1:16|wheel;wheels;wheel in a wheel;wheel within a wheel;wheel in the middle of a wheel",
+      "Ezekiel among the captives in Babylon|2|Ezekiel 1:1–3|babylon;captivity;captives;exile;river chebar;chebar",
+      "Four living creatures|3|Ezekiel 1:5|living creatures;four creatures;creatures;four faces;cherubim;cherubims;cherub",
+      "Eating the scroll|3|Ezekiel 3:1–3|scroll;roll;ate the scroll;eating a scroll;eat the scroll;sweet as honey;honey",
+      "Shepherds and sheep|3|Ezekiel 34:1–16|shepherd;shepherds;sheep;flock;feed my sheep;lost sheep",
+      "River flowing from the temple|3|Ezekiel 47:1–12|river;water from the temple;temple river;healing waters;dead sea healed;stream;waters",
+      "Faces of a man, lion, ox and eagle|4|Ezekiel 1:10|face of a man;face of a lion;face of an ox;face of an eagle;lion;ox;eagle;faces",
+      "The new temple|4|Ezekiel 40–48|temple;new temple;temple vision;measuring;measuring reed;measuring the temple",
+      "The brick model of Jerusalem|4|Ezekiel 4:1–3|brick;tile;model;siege;model of jerusalem",
+      "Lying on his side for 390 days|4|Ezekiel 4:4–6|lying on his side;lay on his side;390 days;390;his side;side",
+      "Gog and Magog|4|Ezekiel 38:2|gog;magog;gog and magog",
+      "The soul that sins shall die|4|Ezekiel 18:2–4, 20|soul that sinneth;soul that sins;own sins;sour grapes;fathers have eaten sour grapes;personal responsibility",
+      "Throne and rainbow|4|Ezekiel 1:26–28|throne;rainbow;bow in the cloud;sapphire throne;sapphire",
+      "Shaving his hair with a sword|5|Ezekiel 5:1–4|hair;beard;shave;shaved;shaving;razor;barbers razor;haircut",
+      "The glory of the Lord leaves the temple|5|Ezekiel 10:18|glory departs;glory leaving;glory of the lord;glory departed;glory",
+      "\"The Lord is there\"|5|Ezekiel 48:35|the lord is there;jehovah shammah;yahweh shammah",
+      "Two eagles and the cedar|5|Ezekiel 17:3|eagles;two eagles;great eagle;cedar;cedar twig;vine"
+    ],
+    n: [
+      "Burning bush|Exodus 3:2|That vision was Moses's, not Ezekiel's.|burning bush"
+    ]
+  },
+  {
+    id: "dan-people", group: "study", title: "People in Daniel", diff: "Medium", mode: "name",
+    prompt: "Name a person (or heavenly being) in the book of Daniel",
+    note: "Captives, kings, officials and angels.",
+    a: [
+      "Daniel|1|Daniel 1:6|belteshazzar",
+      "Shadrach|1|Daniel 1:7|hananiah;shadrack",
+      "Meshach|1|Daniel 1:7|mishael;meshack",
+      "Abednego|1|Daniel 1:7|abed nego;azariah",
+      "Nebuchadnezzar|1|Daniel 1:1|nebuchadrezzar;nebakanezer;nebuchadnezer",
+      "Darius the Mede|2|Daniel 5:31; 6:1|darius",
+      "Belshazzar|3|Daniel 5:1|belshazar",
+      "Gabriel|4|Daniel 8:16; 9:21|angel gabriel",
+      "Michael|4|Daniel 10:13|archangel michael",
+      "Cyrus|4|Daniel 1:21; 6:28|",
+      "The Ancient of Days|4|Daniel 7:9|ancient of days",
+      "Ashpenaz|5|Daniel 1:3|",
+      "Arioch|5|Daniel 2:14|",
+      "Melzar|5|Daniel 1:11 (KJV)|the steward",
+      "Jehoiakim|5|Daniel 1:1|"
+    ],
+    n: [
+      "Jonah|Jonah 1:1|Jonah has his own book.|",
+      "Goliath|1 Samuel 17:4|Goliath is in 1 Samuel.|"
+    ]
+  },
+  {
+    id: "dan-stories", group: "study", title: "Stories in Daniel", diff: "Medium", mode: "kw",
+    prompt: "Name an event or story from the book of Daniel",
+    note: "Daniel chapters 1 to 12.",
+    a: [
+      "The lions' den|1|Daniel 6:16–23|lions den;lion;lions;den",
+      "The fiery furnace|1|Daniel 3:19–27|fiery furnace;furnace;fire;burning;oven",
+      "The writing on the wall|1|Daniel 5:5, 25|writing on the wall;handwriting;hand writing;wall;mene;tekel;upharsin;finger",
+      "Refusing the king's food|1|Daniel 1:8–16|kings food;kings meat;vegetables;pulse;diet;food;water;refused food;ate vegetables",
+      "Nebuchadnezzar's dream of the statue|1|Daniel 2|statue dream;dream statue;image dream;dream;statue;interpreted dream;interpreting dream;interpret",
+      "The golden image|3|Daniel 3:1|golden image;gold statue;golden statue;image of gold;bow down;worship the statue",
+      "The fourth man in the fire|3|Daniel 3:25|fourth man;fourth person;son of god;angel in the fire;fourth man in the fire",
+      "Nebuchadnezzar eats grass|3|Daniel 4:33|grass;ate grass;eating grass;went crazy;madness;insane;lived like an animal;tree dream;great tree",
+      "Praying three times a day|3|Daniel 6:10|pray;prayed;praying;prayer;three times a day;window;toward jerusalem",
+      "Belshazzar's feast|4|Daniel 5:1–4|feast;belshazzars feast;party;banquet;temple cups;gold cups;vessels",
+      "The four beasts vision|4|Daniel 7|four beasts;beasts;beast;bear;leopard;ten horns",
+      "Gabriel appears|4|Daniel 8:16; 9:21|gabriel;angel gabriel",
+      "The stone cut without hands|4|Daniel 2:34, 45|stone;stone cut;without hands;rock;stone that became a mountain",
+      "The ram and the goat|5|Daniel 8|ram;goat;ram and goat",
+      "The seventy weeks|5|Daniel 9:24|seventy weeks;70 weeks;weeks"
+    ],
+    n: [
+      "Swallowed by a whale|Jonah 1:17|That's Jonah, not Daniel.|whale;big fish;swallowed"
+    ]
+  },
+  {
+    id: "dan-statue", group: "study", title: "The dream statue", diff: "Easy", mode: "kw",
+    prompt: "Name a part of the statue in Nebuchadnezzar's dream",
+    note: "Daniel 2:31–35. Quick round: only seven answers.",
+    a: [
+      "Head of gold|1|Daniel 2:32|head;gold;golden head;head of gold",
+      "Chest and arms of silver|2|Daniel 2:32|silver;chest;breast;arms;chest of silver",
+      "Legs of iron|1|Daniel 2:33|iron;legs;legs of iron",
+      "Belly and thighs of bronze|3|Daniel 2:32|bronze;brass;belly;thighs;stomach;waist",
+      "Feet of iron and clay|1|Daniel 2:33|clay;feet;toes;iron and clay;feet of clay;miry clay",
+      "The stone cut without hands|4|Daniel 2:34|stone;rock;cut without hands;cut out without hands",
+      "The mountain that filled the earth|5|Daniel 2:35|mountain;filled the whole earth;great mountain;filled the earth"
+    ],
+    n: []
+  },
+  {
+    id: "hosea", group: "study", title: "Hosea", diff: "Medium", mode: "kw",
+    prompt: "Name a person, phrase or image from Hosea",
+    note: "Hosea's family, and what God taught through them.",
+    a: [
+      "Hosea|1|Hosea 1:1|hosea;osee",
+      "Gomer|1|Hosea 1:3|gomer;hoseas wife;unfaithful wife;wife of whoredoms;harlot;prostitute",
+      "Israel's unfaithfulness to God|1|Hosea 1:2; 4:12|unfaithful;unfaithfulness;israel unfaithful;whoredom;whoredoms;spiritual adultery;adultery;cheating",
+      "God's love for Israel|1|Hosea 3:1; 11:1–4|gods love;love;loves israel;steadfast love;covenant love;forgiveness;forgive;forgiving;redeeming love",
+      "Buying Gomer back|1|Hosea 3:2|bought her back;buying her back;redeemed;redeem;fifteen pieces of silver;15 pieces of silver;silver;barley;bought back",
+      "Idols and Baal|2|Hosea 2:13; 11:2|baal;baalim;idols;idol;calves;golden calf;calf",
+      "Jezreel|3|Hosea 1:4|jezreel;jezrael",
+      "Sow the wind, reap the whirlwind|3|Hosea 8:7|whirlwind;sow the wind;reap the whirlwind;wind",
+      "Mercy, not sacrifice|3|Hosea 6:6|mercy not sacrifice;desired mercy;mercy;not sacrifice;sacrifice",
+      "Come, let us return to the Lord|1|Hosea 6:1; 14:1|return;let us return;return unto the lord;turn back",
+      "Lo-ruhamah|4|Hosea 1:6|lo ruhamah;loruhamah;ruhamah;not pitied;no mercy;not loved;unloved",
+      "Lo-ammi|4|Hosea 1:9|lo ammi;loammi;ammi;not my people",
+      "Destroyed for lack of knowledge|4|Hosea 4:6|lack of knowledge;destroyed for lack;knowledge",
+      "Out of Egypt I called my son|4|Hosea 11:1|out of egypt;called my son;egypt",
+      "Betrothed forever|4|Hosea 2:19–20|betroth;betrothed;betroth thee;engaged forever",
+      "Beeri (Hosea's father)|5|Hosea 1:1|beeri",
+      "Diblaim (Gomer's father)|5|Hosea 1:3|diblaim",
+      "Cords of love|5|Hosea 11:4|cords of love;cords;bands of love;bands of a man",
+      "Ephraim is a cake not turned|5|Hosea 7:8|cake;cake not turned;half baked;unturned cake;pancake",
+      "A silly dove|5|Hosea 7:11|dove;silly dove;senseless dove",
+      "The door of hope|5|Hosea 2:15|door of hope;valley of achor;achor"
+    ],
+    n: []
+  },
+  {
+    id: "joel", group: "study", title: "Joel", diff: "Hard", mode: "kw",
+    prompt: "Name a phrase, image or teaching from Joel",
+    note: "Joel's three chapters: locusts, repentance and the day of the Lord.",
+    a: [
+      "The locust plague|1|Joel 1:4|locust;locusts;grasshoppers;swarm;bugs",
+      "I will pour out my Spirit upon all flesh|1|Joel 2:28|pour out my spirit;spirit poured out;all flesh;pour out spirit;outpouring;holy ghost;holy spirit;spirit",
+      "Old men dream dreams, young men see visions|1|Joel 2:28|dreams;dream;visions;vision;old men;young men;prophesy;sons and daughters shall prophesy",
+      "Repent with all your heart|1|Joel 2:12–13|repent;repentance;turn to the lord;turn ye;turn to god;with all your heart;fasting and weeping",
+      "The day of the Lord|1|Joel 2:1, 31|day of the lord;great and terrible day;great and dreadful day;dreadful day;terrible day",
+      "Sun to darkness, moon to blood|2|Joel 2:30–31|moon into blood;moon to blood;blood moon;sun into darkness;sun darkened;sun;moon;darkness;wonders in the heavens;blood and fire;pillars of smoke;blood",
+      "Rend your heart, not your garments|3|Joel 2:13|rend your heart;rend;tear your heart;heart not garments;garments;clothes",
+      "Blow the trumpet in Zion|3|Joel 2:1, 15|trumpet;blow the trumpet;shofar;alarm",
+      "Whoever calls on the name of the Lord shall be saved|3|Joel 2:32|call on the name;calls on the name;shall be delivered;shall be saved;saved;delivered",
+      "Restore the years the locust has eaten|4|Joel 2:25|restore the years;restore;years the locust hath eaten;years the locusts have eaten;years the locust has eaten",
+      "Beat your plowshares into swords|4|Joel 3:10|plowshares;ploughshares;swords;pruning hooks;spears;beat your plowshares",
+      "The valley of decision|4|Joel 3:14|valley of decision;multitudes in the valley;decision",
+      "Call a fast and a solemn assembly|4|Joel 1:14; 2:15|fast;fasting;solemn assembly;sanctify a fast;call a fast",
+      "Palmerworm, cankerworm and caterpiller|5|Joel 1:4 (KJV)|palmerworm;cankerworm;caterpiller;caterpillar;cutting locust;hopping locust;destroying locust;swarming locust",
+      "The valley of Jehoshaphat|5|Joel 3:2, 12|valley of jehoshaphat;jehoshaphat",
+      "Joel son of Pethuel|5|Joel 1:1|pethuel",
+      "The northern army|5|Joel 2:20|northern army;northern;army of the north"
+    ],
+    n: [
+      "Swords into plowshares|Isaiah 2:4|That's Isaiah and Micah. Joel flips it: plowshares into swords (Joel 3:10).|swords into plowshares;swords to plowshares"
+    ]
+  },
+
+  /* From Assess Your Learning 9 (Lesson 148) and the lessons it builds on */
+  {
+    id: "restoration", group: "study", title: "Prophecies of the Restoration", diff: "Hard", mode: "kw", refs: true,
+    prompt: "Name an Old Testament prophecy of the latter-day Restoration",
+    note: "Give the reference or what it foretells.",
+    a: [
+      "A marvellous work and a wonder|1|Isaiah 29:13–14|marvellous work;marvelous work;marvelous work and a wonder;a wonder;isaiah 29;restoration|The Lord promised a marvellous work: His restored gospel.",
+      "The stick of Judah and the stick of Joseph|1|Ezekiel 37:15–17|stick;sticks;two sticks;stick of judah;stick of joseph;bible and book of mormon;book of mormon and bible;book of mormon;ezekiel 37|The Bible and the Book of Mormon become one in the Lord's hand.",
+      "The stone cut without hands|1|Daniel 2:44–45|stone;stone cut without hands;stone cut out;rock;kingdom;kingdom of god;never be destroyed;fill the earth;filled the earth;daniel 2;the church|God's kingdom, His restored Church, will roll forth to fill the earth.",
+      "Fishers and hunters gather Israel|2|Jeremiah 16:14–16|fishers;hunters;fishers and hunters;gathering;gathering of israel;gather israel;missionaries;missionary work;jeremiah 16|The Lord sends missionaries to find and gather scattered Israel.",
+      "I will pour out my Spirit upon all flesh|3|Joel 2:28–29|pour out my spirit;pour out spirit;all flesh;dreams;visions;young men shall see visions;joel 2|Moroni quoted this to Joseph Smith as soon to be fulfilled (Joseph Smith—History 1:41).",
+      "One of a city, and two of a family|3|Jeremiah 3:14–15|one of a city;two of a family;jeremiah 3|Israel is gathered one by one and family by family.",
+      "The mountain of the Lord's house|3|Isaiah 2:2–3|mountain of the lords house;lords house;house of the lord;top of the mountains;temple;temples;isaiah 2|Latter-day temples draw people from all nations.",
+      "Elijah will turn the hearts|3|Malachi 4:5–6|elijah;turn the hearts;hearts of the fathers;hearts of the children;sealing power;sealing;malachi 4|Elijah restored the sealing power in the Kirtland Temple (Doctrine and Covenants 110:13–16).",
+      "A voice from the dust|4|Isaiah 29:4|voice from the dust;out of the dust;out of the ground;speak out of the ground|The Book of Mormon came out of the ground to speak to us.",
+      "The words of a sealed book|4|Isaiah 29:11–12|sealed book;book that is sealed;i am not learned;not learned;anthon;charles anthon|Fulfilled when Martin Harris showed the characters to Professor Anthon (Joseph Smith—History 1:64–65).",
+      "An ensign for the nations|4|Isaiah 11:11–12|ensign;ensign for the nations;ensign to the nations;second time;isaiah 11|The Lord would gather His people a second time.",
+      "A new covenant written in their hearts|4|Jeremiah 31:31–33|new covenant;everlasting covenant;written in their hearts;write it in their hearts;jeremiah 31|The restored gospel brings the new and everlasting covenant.",
+      "The Lord reveals His secret to the prophets|5|Amos 3:7|revealeth his secret;reveals his secret;secret unto his servants;living prophets;prophets;amos 3|The Restoration brought living prophets again.",
+      "A famine of hearing the words of the Lord|5|Amos 8:11–12|famine;famine of the word;famine of hearing;apostasy;great apostasy;amos 8|It foretells the apostasy that made a restoration necessary.",
+      "My messenger shall prepare the way|5|Malachi 3:1|messenger;my messenger;prepare the way;suddenly come to his temple;malachi 3|Moroni quoted Malachi 3 to Joseph Smith (Joseph Smith—History 1:36)."
+    ],
+    n: [
+      "The First Vision|Joseph Smith—History 1:17|The First Vision fulfilled these prophecies, but it's recorded in the Pearl of Great Price, not the Old Testament. Count it if you like.|first vision;joseph smith;sacred grove"
+    ]
+  },
+  {
+    id: "church-needed", group: "study", title: "Why we need the Church today", diff: "Medium", mode: "kw",
+    prompt: "Name a reason the Lord's Church is needed on the earth today",
+    note: "From Assess Your Learning 9: reasons a missionary might teach.",
+    a: [
+      "Priesthood authority|1|Hebrews 5:4|priesthood;authority;priesthood authority;power of god",
+      "Baptism and other ordinances|1|John 3:5|baptism;baptized;baptize;ordinances;ordinance;sacrament;confirmation",
+      "Living prophets and apostles|1|Amos 3:7; Ephesians 4:11–14|prophet;prophets;living prophet;apostle;apostles;revelation;continuing revelation",
+      "The Book of Mormon|1|Ezekiel 37:15–17|book of mormon;more scripture;scriptures;scripture",
+      "Temples and eternal families|2|Malachi 4:5–6|temple;temples;eternal families;eternal family;families;family;forever families;sealing;sealed",
+      "The gift of the Holy Ghost|2|Acts 2:38|holy ghost;gift of the holy ghost;holy spirit;spirit",
+      "The truth about God|2|John 17:3|truth;the truth;truth about god;know god;godhead;nature of god;fulness of the gospel;true gospel;gospel",
+      "Making and keeping covenants|3|Jeremiah 31:31–33|covenant;covenants;make covenants;keep covenants",
+      "Gathering Israel|3|Jeremiah 16:14–16|gather israel;gathering;gathering of israel;missionary work;missionaries;share the gospel",
+      "Support from fellow Saints|3|Mosiah 18:8–9|support;community;ward;fellowship;friends;help each other;bear one anothers burdens;mourn with those that mourn;service;serve",
+      "Ending the apostasy|4|Amos 8:11–12|apostasy;great apostasy;restore;restored;restoration",
+      "Preparing for the Second Coming|4|Daniel 2:44–45|second coming;prepare;return of christ;millennium",
+      "Saving the dead|4|1 Corinthians 15:29|dead;ancestors;baptism for the dead;baptisms for the dead;family history;work for the dead;spirit world",
+      "Caring for the poor|5|Isaiah 58:6–7|poor;needy;welfare;fast offerings;humanitarian;feed the hungry",
+      "Helping us become like Christ|5|Ephesians 4:12–13|become like christ;become like jesus;perfect;perfecting;grow;progress;spiritual growth"
+    ],
+    n: []
+  },
+  {
+    id: "gather-israel", group: "study", title: "Ways to gather Israel", diff: "Easy", mode: "kw",
+    prompt: "Name a way a teenager can help gather Israel",
+    note: "On both sides of the veil (Jeremiah 16:14–16).",
+    a: [
+      "Invite a friend to church|1|John 1:46|invite;invite a friend;invite friends;bring a friend;church;sacrament meeting",
+      "Be a good example|1|Matthew 5:16|example;good example;let your light shine;light;be kind;kindness;be nice",
+      "Serve a mission|1|Jeremiah 16:16|mission;serve a mission;missionary;go on a mission",
+      "Share your testimony|1|Doctrine and Covenants 62:3|testimony;bear testimony;share testimony;share your testimony",
+      "Invite a friend to a youth activity|2|John 1:46|activity;activities;youth activity;mutual;youth night;fsy;dance;camp",
+      "Pray for missionary opportunities|2|Alma 6:6|pray;prayer;pray for opportunities;pray for friends;pray for them",
+      "Share a scripture|2|1 Peter 3:15|share a scripture;scripture;scriptures;verse",
+      "Give someone a Book of Mormon|3|Moroni 10:4–5|book of mormon;give a book of mormon;copy of the book of mormon",
+      "Share gospel messages online|3|Doctrine and Covenants 123:12|social media;post;online;instagram;tiktok;share a video;video;text",
+      "Help the missionaries|3|Doctrine and Covenants 18:15–16|help the missionaries;feed the missionaries;splits;go on splits;teach with the missionaries;missionary lesson;missionaries",
+      "Invite a friend to seminary|3|John 1:46|seminary;invite to seminary",
+      "Welcome new members|4|Moroni 6:4|fellowship;befriend;new members;new member;converts;welcome;sit with",
+      "Minister to those who've stopped coming|4|Luke 15:4|minister;ministering;less active;inactive;come back;bring back;lost sheep;rescue",
+      "Fast for someone|4|Alma 6:6|fast;fasting",
+      "Do family history|5|Malachi 4:5–6|family history;family tree;genealogy;familysearch;ancestors;indexing",
+      "Do temple work for the dead|5|Doctrine and Covenants 128:15|temple work;baptisms for the dead;baptism for the dead;proxy;temple;temple trip;baptisms"
+    ],
+    n: []
+  },
+  {
+    id: "foreordained", group: "study", title: "Foreordained", diff: "Hard", mode: "name",
+    prompt: "Name someone the scriptures say was chosen or foretold before they were born",
+    note: "From the Jeremiah 1 lesson: “Before I formed thee in the belly I knew thee.”",
+    a: [
+      "Jesus Christ|1|1 Peter 1:19–20|jesus;christ;savior;the savior;messiah;jehovah",
+      "Jeremiah|1|Jeremiah 1:5|",
+      "Abraham|2|Abraham 3:23|",
+      "John the Baptist|2|Luke 1:13–17|john;john the baptist",
+      "Mary, mother of Jesus|2|1 Nephi 11:18–20; Mosiah 3:8|mary",
+      "Joseph Smith|2|2 Nephi 3:15; Doctrine and Covenants 138:53|joseph smith;prophet joseph",
+      "You (all of us)|3|Abraham 3:22–23|me;you;us;we;myself;everyone;all of us;noble and great;noble and great ones",
+      "Samson|3|Judges 13:3–5|sampson",
+      "Isaac|3|Genesis 17:19|",
+      "Moses|4|2 Nephi 3:9–10|",
+      "Solomon|4|1 Chronicles 22:9|",
+      "Hyrum Smith|4|Doctrine and Covenants 138:53|hyrum",
+      "Brigham Young|4|Doctrine and Covenants 138:53|brigham",
+      "John Taylor|5|Doctrine and Covenants 138:53|",
+      "Wilford Woodruff|5|Doctrine and Covenants 138:53|",
+      "Ishmael|5|Genesis 16:11|",
+      "Cyrus|5|Isaiah 44:28; 45:1|",
+      "Josiah|5|1 Kings 13:2|"
+    ],
+    n: []
+  },
+
+  /* ===== Doctrinal Mastery: one round per situation (built below) ===== */
+  ...DM_CATS,
+
+  /* ===== Whole Old Testament ===== */
+  {
+    id: "plagues", group: "ot", title: "The ten plagues", diff: "Easy", mode: "kw",
+    prompt: "Name one of the ten plagues of Egypt",
+    note: "Exodus 7–12",
+    a: [
+      "Water turned to blood|1|Exodus 7:14–24|blood;water to blood;water into blood;river of blood;bloody water",
+      "Frogs|1|Exodus 8:1–15|frog;frogs",
+      "Locusts|1|Exodus 10:1–20|locust;locusts;grasshopper;grasshoppers",
+      "Death of the firstborn|1|Exodus 11–12|firstborn;first born;death of the firstborn;death of firstborn;oldest son;oldest sons;angel of death",
+      "Darkness|1|Exodus 10:21–29|dark;darkness;no light;three days of darkness",
+      "Hail|2|Exodus 9:13–35|hail;hailstorm;hailstones;hail and fire",
+      "Boils|3|Exodus 9:8–12|boil;boils;sores;skin sores;blisters",
+      "Gnats|4|Exodus 8:16–19|gnat;gnats;lice;louse;mosquito;mosquitoes;dust",
+      "Flies|4|Exodus 8:20–32|fly;flies;swarms;swarm of flies",
+      "Death of livestock|5|Exodus 9:1–7|livestock;cattle;cows;dead animals;animals died;animals dying;pestilence;murrain;sick animals;dead cattle;dead livestock"
+    ],
+    n: [
+      "Snakes|Exodus 7:8–13|Aaron's staff became a snake before the plagues began, but it wasn't one of the ten.|snake;snakes;serpent;staff to snake"
+    ]
+  },
+  {
+    id: "sons", group: "ot", title: "Sons of Jacob", diff: "Medium", mode: "name",
+    prompt: "Name one of the twelve sons of Jacob",
+    note: "Their names became the tribes of Israel.",
+    a: [
+      "Joseph|1|Genesis 30:24|",
+      "Benjamin|1|Genesis 35:18|",
+      "Judah|1|Genesis 29:35|juda",
+      "Reuben|1|Genesis 29:32|ruben;rueben",
+      "Levi|3|Genesis 29:34|",
+      "Simeon|3|Genesis 29:33|",
+      "Dan|3|Genesis 30:6|",
+      "Gad|4|Genesis 30:11|",
+      "Asher|4|Genesis 30:13|aser",
+      "Naphtali|4|Genesis 30:8|nephtali;naphthali;nepthali;naftali",
+      "Issachar|5|Genesis 30:18|isachar;issacar;issakar",
+      "Zebulun|5|Genesis 30:20|zebulon;zabulon"
+    ],
+    n: [
+      "Dinah|Genesis 30:21|Dinah was Jacob's daughter, not a son.|dina",
+      "Ephraim|Genesis 48:5|Ephraim was Joseph's son, so Jacob's grandson. He did get a tribe named after him.|",
+      "Manasseh|Genesis 48:5|Manasseh was Joseph's son, so Jacob's grandson. He did get a tribe named after him.|manasse",
+      "Esau|Genesis 25:25|Esau was Jacob's twin brother.|"
+    ]
+  },
+  {
+    id: "judges", group: "ot", title: "Judges of Israel", diff: "Hard", mode: "name",
+    prompt: "Name a judge who led Israel",
+    note: "Includes the judges in the book of Judges, plus Eli and Samuel.",
+    a: [
+      "Samson|1|Judges 15:20|sampson",
+      "Gideon|1|Judges 6:11|gidion;jerubbaal;jerub baal",
+      "Deborah|1|Judges 4:4|debora;debra",
+      "Samuel|1|1 Samuel 7:15|",
+      "Eli|3|1 Samuel 4:18|",
+      "Ehud|3|Judges 3:15|",
+      "Jephthah|3|Judges 11:1|jephtha;jepthah;jeptha",
+      "Othniel|4|Judges 3:9|otniel",
+      "Shamgar|4|Judges 3:31|",
+      "Jair|4|Judges 10:3|",
+      "Tola|5|Judges 10:1|",
+      "Ibzan|5|Judges 12:8|",
+      "Elon|5|Judges 12:11|",
+      "Abdon|5|Judges 12:13|"
+    ],
+    n: [
+      "Barak|Judges 4:6|Barak led Deborah's army. Deborah was the judge. Leaders can count it if they like.|",
+      "Abimelech|Judges 9:6|Abimelech made himself king. He isn't called a judge.|",
+      "Saul|1 Samuel 10:1|Saul was the first king, after the time of the judges.|"
+    ]
+  },
+  {
+    id: "prophetbooks", group: "ot", title: "Books named after prophets", diff: "Medium", mode: "name",
+    prompt: "Name an Old Testament book named after a prophet",
+    note: "Major and minor prophets, plus Samuel.",
+    a: [
+      "Isaiah|1|Isaiah 1:1|isiah;isaih",
+      "Jeremiah|1|Jeremiah 1:1|",
+      "Daniel|1|Daniel 1:6|",
+      "Jonah|1|Jonah 1:1|",
+      "Ezekiel|1|Ezekiel 1:3|ezekial",
+      "Malachi|2|Malachi 1:1|malachai",
+      "Joel|2|Joel 1:1|",
+      "Amos|3|Amos 1:1|",
+      "Micah|3|Micah 1:1|",
+      "Hosea|3|Hosea 1:1|",
+      "Samuel|3|1 Samuel 3:20|",
+      "Zechariah|4|Zechariah 1:1|zachariah;zacharias",
+      "Habakkuk|4|Habakkuk 1:1|habakuk;habbakuk;habacuc",
+      "Obadiah|4|Obadiah 1|",
+      "Haggai|4|Haggai 1:1|hagai",
+      "Nahum|5|Nahum 1:1|",
+      "Zephaniah|5|Zephaniah 1:1|"
+    ],
+    n: [
+      "Lamentations|Lamentations 1:1|Traditionally linked to Jeremiah, but it isn't named after a prophet.|",
+      "Elijah|1 Kings 17:1|Elijah has no book of his own. His story is in 1 Kings 17 to 2 Kings 2.|elias",
+      "Elisha|2 Kings 2|Elisha has no book of his own. His story is in 1 and 2 Kings.|",
+      "Moses|Deuteronomy 34:10|Moses was a prophet, but no book carries his name.|"
+    ]
+  },
+  {
+    id: "women", group: "ot", title: "Women in Genesis", diff: "Hard", mode: "name",
+    prompt: "Name a woman who appears in Genesis",
+    note: "Named women, plus a couple who are known by their husband's name.",
+    a: [
+      "Eve|1|Genesis 3:20|",
+      "Sarah|1|Genesis 17:15|sarai;sara",
+      "Rebekah|1|Genesis 24:15|rebecca;rebekka;rebeca;rebeka",
+      "Rachel|1|Genesis 29:6|",
+      "Leah|1|Genesis 29:16|lea",
+      "Hagar|2|Genesis 16:1|",
+      "Lot's wife|2|Genesis 19:26|lots wife;wife of lot",
+      "Dinah|3|Genesis 30:21|dina",
+      "Tamar|3|Genesis 38:6|",
+      "Bilhah|3|Genesis 29:29|bilha",
+      "Zilpah|3|Genesis 29:24|zilpa",
+      "Potiphar's wife|3|Genesis 39:7|potiphars wife;wife of potiphar",
+      "Keturah|4|Genesis 25:1|",
+      "Asenath|4|Genesis 41:45|",
+      "Adah|4|Genesis 4:19|ada",
+      "Zillah|4|Genesis 4:19|zilla",
+      "Milcah|5|Genesis 11:29|milka",
+      "Naamah|5|Genesis 4:22|",
+      "Deborah (Rebekah's nurse)|5|Genesis 35:8|deborah;debora",
+      "Basemath|5|Genesis 26:34|bashemath;basmath",
+      "Judith|5|Genesis 26:34|"
+    ],
+    n: [
+      "Miriam|Exodus 15:20|Miriam is in Exodus, not Genesis.|",
+      "Ruth|Ruth 1:4|Ruth has her own book, much later than Genesis.|",
+      "Esther|Esther 2:7|Esther has her own book, much later than Genesis.|",
+      "Mary|Luke 1:27|Mary is in the New Testament.|"
+    ]
+  },
+  {
+    id: "kings", group: "ot", title: "Kings of Israel and Judah", diff: "Hard", mode: "name",
+    prompt: "Name a king or queen who ruled Israel or Judah",
+    note: "The united kingdom, the northern kingdom (Israel) and the southern kingdom (Judah).",
+    a: [
+      "Saul|1|1 Samuel 10:1|",
+      "David|1|2 Samuel 5:3|",
+      "Solomon|1|1 Kings 1:39|",
+      "Ahab|1|1 Kings 16:29|",
+      "Hezekiah|2|2 Kings 18:1|hezekia",
+      "Josiah|2|2 Kings 22:1|",
+      "Rehoboam|2|1 Kings 14:21|rehoboum",
+      "Jeroboam|2|1 Kings 12:20|jeroboam 1;jeroboam the first",
+      "Zedekiah|3|2 Kings 24:18|",
+      "Manasseh|3|2 Kings 21:1|manasse;manassah",
+      "Jehoshaphat|3|1 Kings 22:41|jehosaphat;josaphat",
+      "Jehu|3|2 Kings 9:13|",
+      "Uzziah|3|2 Chronicles 26:1|azariah;uzzia",
+      "Asa|3|1 Kings 15:9|",
+      "Ahaz|3|2 Kings 16:1|",
+      "Joash / Jehoash|3|2 Kings 12:1; 13:10|joash;jehoash",
+      "Athaliah|3|2 Kings 11:3|athalia",
+      "Omri|3|1 Kings 16:23|",
+      "Abijah|4|1 Kings 15:1|abijam",
+      "Ish-bosheth|4|2 Samuel 2:10|ishbosheth;ish bosheth;eshbaal;esh baal",
+      "Jotham|4|2 Kings 15:32|",
+      "Jehoahaz|4|2 Kings 13:1; 23:31|",
+      "Amaziah|4|2 Kings 14:1|",
+      "Ahaziah|4|1 Kings 22:51; 2 Kings 8:25|",
+      "Joram / Jehoram|4|2 Kings 3:1; 8:16|joram;jehoram",
+      "Jeroboam II|4|2 Kings 14:23|jeroboam ii;jeroboam 2;jeroboam the second",
+      "Jehoiakim|4|2 Kings 23:36|",
+      "Jehoiachin|4|2 Kings 24:8|jeconiah;coniah",
+      "Hoshea|4|2 Kings 17:1|",
+      "Amon|4|2 Kings 21:19|",
+      "Nadab|5|1 Kings 15:25|",
+      "Baasha|5|1 Kings 15:33|basha",
+      "Elah|5|1 Kings 16:8|",
+      "Zimri|5|1 Kings 16:15|",
+      "Zechariah|5|2 Kings 15:8|zachariah",
+      "Shallum|5|2 Kings 15:13|",
+      "Menahem|5|2 Kings 15:17|",
+      "Pekahiah|5|2 Kings 15:23|",
+      "Pekah|5|2 Kings 15:27|"
+    ],
+    n: [
+      "Jezebel|1 Kings 16:31|Jezebel was Ahab's queen, but she didn't rule in her own right.|",
+      "Nebuchadnezzar|Daniel 1:1|Nebuchadnezzar was king of Babylon.|nebuchadrezzar;nebakanezer",
+      "Pharaoh|Exodus 1:8|Pharaoh was the king of Egypt.|",
+      "Cyrus|Ezra 1:1|Cyrus was king of Persia.|",
+      "Herod|Matthew 2:1|Herod ruled Judea in the New Testament.|"
+    ]
+  },
+  {
+    id: "creation", group: "ot", title: "Creation", diff: "Easy", mode: "kw",
+    prompt: "Name something God made in Genesis 1",
+    note: "Anything from the six days of creation.",
+    a: [
+      "Light|1|Genesis 1:3|light;day and night",
+      "Plants|1|Genesis 1:11–12|plant;plants;tree;trees;grass;vegetation;fruit;seeds;flowers;herbs",
+      "Sun|1|Genesis 1:16|sun",
+      "Moon|1|Genesis 1:16|moon",
+      "Stars|1|Genesis 1:16|star;stars",
+      "Fish|1|Genesis 1:20–21|fish;sea creatures;sea life",
+      "Birds|1|Genesis 1:20–21|bird;birds;fowl",
+      "Humans|1|Genesis 1:26–27|man;men;woman;women;humans;human;humankind;mankind;people;adam;eve",
+      "Wild animals|2|Genesis 1:24–25|wild animals;animals;beasts;beasts of the earth",
+      "Sky|2|Genesis 1:6–8|sky;heaven;heavens;firmament;expanse;atmosphere;air",
+      "Seas|2|Genesis 1:9–10|sea;seas;ocean;oceans;water;waters",
+      "Land|2|Genesis 1:9–10|land;earth;dry land;ground;world",
+      "Livestock|3|Genesis 1:24–25|livestock;cattle;cows;farm animals",
+      "Creeping things|4|Genesis 1:24–25|creeping things;creatures that move along the ground;reptiles;insects;bugs;snakes;crawling things",
+      "Great sea creatures|5|Genesis 1:21|great sea creatures;sea monsters;sea monster;whale;whales;great creatures;great whales"
+    ],
+    n: [
+      "Rest|Genesis 2:2–3|God rested on the seventh day and made it holy, but rest isn't something created in Genesis 1.|rest;sabbath;seventh day",
+      "Garden of Eden|Genesis 2:8|The garden comes in Genesis 2.|garden;eden;garden of eden"
+    ]
+  },
+  {
+    id: "commandments", group: "ot", title: "The Ten Commandments", diff: "Easy", mode: "kw",
+    prompt: "Name one of the Ten Commandments",
+    note: "Exodus 20:1–17 (also Deuteronomy 5).",
+    a: [
+      "Do not murder|1|Exodus 20:13|murder;kill;killing",
+      "Do not steal|1|Exodus 20:15|steal;stealing;theft;rob",
+      "Do not lie|1|Exodus 20:16|lie;lying;liar;false witness;bear false;false testimony",
+      "Honor your parents|1|Exodus 20:12|parents;father;mother;mom;dad;honor;honour",
+      "No other gods|1|Exodus 20:3|other gods;no other god;gods before me;one god;only god;god first;worship only god",
+      "Keep the Sabbath holy|1|Exodus 20:8–11|sabbath;day of rest;rest day;seventh day;keep it holy;holy day",
+      "Do not commit adultery|3|Exodus 20:14|adultery;cheat on;cheating on;affair",
+      "No idols|3|Exodus 20:4–6|idol;idols;graven;image;images;statue;statues;carved",
+      "Don't misuse God's name|4|Exodus 20:7|name;vain;misuse;swear;swearing;cuss;cussing;curse;cursing;blaspheme",
+      "Do not covet|4|Exodus 20:17|covet;coveting;envy;jealous;want what others have;neighbors wife;neighbors house"
+    ],
+    n: [
+      "Love your neighbor|Leviticus 19:18|A great commandment from Leviticus 19:18, but not one of the ten.|love your neighbor;love thy neighbor;love your neighbour;love others",
+      "Love God|Deuteronomy 6:5|From Deuteronomy 6:5, the greatest commandment, but not one of the ten as written.|love god;love the lord"
+    ]
+  },
+  {
+    id: "prophets", group: "ot", title: "Prophets without a book", diff: "Hard", mode: "name",
+    prompt: "Name a prophet who doesn't have a book named after them",
+    note: "Prophets and prophetesses whose stories appear in other books.",
+    a: [
+      "Elijah|1|1 Kings 17:1|elias;elija",
+      "Elisha|1|1 Kings 19:16|elisa",
+      "Moses|1|Deuteronomy 34:10|",
+      "Nathan|1|2 Samuel 12:1|",
+      "Miriam|2|Exodus 15:20|",
+      "Deborah|2|Judges 4:4|debora",
+      "Aaron|3|Exodus 7:1|aron",
+      "Balaam|3|Numbers 22:5|",
+      "Huldah|4|2 Kings 22:14|hulda",
+      "Gad|4|1 Samuel 22:5|",
+      "Ahijah|4|1 Kings 11:29|",
+      "Micaiah|4|1 Kings 22:8|",
+      "Uriah|4|Jeremiah 26:20|urijah",
+      "Jehu son of Hanani|5|1 Kings 16:1|jehu",
+      "Shemaiah|5|2 Chronicles 12:5|",
+      "Hanani|5|2 Chronicles 16:7|",
+      "Iddo|5|2 Chronicles 13:22|",
+      "Oded|5|2 Chronicles 28:9|"
+    ],
+    n: [
+      "Samuel|1 Samuel 3:20|Samuel was a prophet, but 1 and 2 Samuel are named after him.|",
+      "Jonah|Jonah 1:1|Jonah has his own book.|",
+      "Daniel|Daniel 1:6|Daniel has his own book.|",
+      "Isaiah|Isaiah 1:1|Isaiah has his own book.|",
+      "Jeremiah|Jeremiah 1:1|Jeremiah has his own book.|",
+      "John the Baptist|Matthew 3:1|John the Baptist is in the New Testament.|john;john the baptist"
+    ]
+  },
+  {
+    id: "books", group: "ot", title: "Books of the Old Testament", diff: "Easy", mode: "name",
+    prompt: "Name a book of the Old Testament",
+    note: "The 39 books of the Old Testament.",
+    a: [
+      "Genesis|1", "Exodus|1", "Leviticus|2", "Numbers|2", "Deuteronomy|2||deutoronomy;deuteronomey",
+      "Joshua|2", "Judges|2", "Ruth|2", "Samuel (1 & 2)|2||samuel", "Kings (1 & 2)|2||kings",
+      "Chronicles (1 & 2)|3||chronicles", "Ezra|3", "Nehemiah|3", "Esther|2", "Job|1",
+      "Psalms|1||psalm", "Proverbs|1||proverb", "Ecclesiastes|3||ecclesiates;ecclesiastics;qoheleth",
+      "Song of Songs|3||song of solomon;songs;canticles", "Isaiah|1||isiah", "Jeremiah|2", "Lamentations|3",
+      "Ezekiel|3||ezekial", "Daniel|1", "Hosea|3", "Joel|3", "Amos|3", "Obadiah|4", "Jonah|1", "Micah|3",
+      "Nahum|5", "Habakkuk|4||habakuk;habbakuk", "Zephaniah|5", "Haggai|4||hagai",
+      "Zechariah|4||zachariah", "Malachi|3||malachai"
+    ],
+    n: [
+      "Tobit|Apocrypha|Tobit is in Catholic and Orthodox Bibles, not the 39-book Old Testament.|",
+      "Judith|Apocrypha|Judith is in Catholic and Orthodox Bibles, not the 39-book Old Testament.|",
+      "Maccabees|Apocrypha|1 and 2 Maccabees are in Catholic and Orthodox Bibles, not the 39-book Old Testament.|",
+      "Wisdom|Apocrypha|Wisdom is in Catholic and Orthodox Bibles, not the 39-book Old Testament.|wisdom of solomon",
+      "Sirach|Apocrypha|Sirach is in Catholic and Orthodox Bibles, not the 39-book Old Testament.|ecclesiasticus",
+      "Matthew|New Testament|That's a New Testament book.|mathew",
+      "Mark|New Testament|That's a New Testament book.|",
+      "Luke|New Testament|That's a New Testament book.|",
+      "John|New Testament|That's a New Testament book.|",
+      "Acts|New Testament|That's a New Testament book.|",
+      "Romans|New Testament|That's a New Testament book.|",
+      "Revelation|New Testament|That's a New Testament book.|revelations"
+    ]
+  }
+];
+
+/* ---------- Matching ---------- */
+const STRIP = new Set(["the","a","an","king","queen","prophet","prophetess","judge","book","of","1","2","3","first","second","i","ii","1st","2nd","saint","st"]);
+function norm(s) {
+  return String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/['’‘`]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+}
+function stripLead(s) {
+  const w = s.split(" ");
+  while (w.length > 1 && STRIP.has(w[0])) w.shift();
+  return w.join(" ");
+}
+function lev(a, b) {
+  if (a === b) return 0;
+  const m = a.length, n = b.length;
+  if (Math.abs(m - n) > 3) return 99;
+  let prev = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    for (let j = 1; j <= n; j++) {
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    prev = cur;
+  }
+  return prev[n];
+}
+function thr(s) { if (/\d/.test(s)) return 0; /* chapter and verse numbers must match exactly */ const L = s.replace(/ /g, "").length; return L <= 2 ? 0 : L <= 4 ? 1 : L <= 8 ? 2 : 3; }
+
+/* Every way to cite a reference: "Isaiah 29:11–12" also accepts "isaiah 29 11" and "isaiah 29 12". */
+function refKeys(r) {
+  const out = []; let book = "";
+  String(r).split(";").forEach(part => {
+    const m = part.trim().match(/^((?:\d\s)?[A-Za-z][A-Za-z .—-]*?)?\s*(\d+)(?::(\d+)(?:[–-](\d+))?)?/);
+    if (!m) return;
+    if (m[1]) book = norm(m[1]);
+    if (!book) return;
+    if (!m[3]) { out.push(`${book} ${m[2]}`); return; }
+    const a = +m[3], b = m[4] ? +m[4] : a;
+    for (let v = a; v <= Math.min(b, a + 30); v++) out.push(`${book} ${m[2]} ${v}`);
+    out.push(`${book} ${m[2]} ${a}${m[4] ? " " + b : ""}`);
+  });
+  return out;
+}
+
+const CATS = RAW.map(c => {
+  const keysOf = (display, aliases) => {
+    const all = [display].concat(aliases ? aliases.split(";") : []).map(x => norm(x)).filter(Boolean);
+    const out = new Set();
+    all.forEach(k => { out.add(k); if (c.mode === "name") out.add(stripLead(k)); });
+    return [...out];
+  };
+  const a = c.a.map((s, idx) => {
+    const [d, t, r, al, why] = s.split("|");
+    const ref = c.id === "books" ? `Book ${idx + 1} of 39` : r;
+    const keys = keysOf(d.replace(/\s*\(.*\)$/, ""), al);
+    if (c.refs && /\d/.test(r || "")) keys.push(norm(r), ...refKeys(r));
+    return { d, t: +t, r: ref, al: al || "", why: why || "", keys, miss: false };
+  });
+  const n = (c.n || []).map(s => {
+    const [d, r, note, al] = s.split("|");
+    const keys = keysOf(d, al);
+    if (c.refs && /\d/.test(r || "")) keys.push(norm(r), ...refKeys(r));
+    return { d, r, note, al: al || "", keys, miss: true };
+  });
+  return { ...c, a, n };
+});
+const CAT = Object.fromEntries(CATS.map(c => [c.id, c]));
+
+/* Book abbreviations, expanded only when a chapter number follows ("dan 2" yes, "Dan" the son of Jacob no). */
+const ABBR = { gen: "genesis", ex: "exodus", exod: "exodus", josh: "joshua", ps: "psalm", psa: "psalm", psalms: "psalm",
+  prov: "proverbs", isa: "isaiah", jer: "jeremiah", lam: "lamentations", ezek: "ezekiel", eze: "ezekiel",
+  dan: "daniel", hos: "hosea", abr: "abraham", deut: "deuteronomy" };
+function matchAnswer(cat, input) {
+  let x = norm(input);
+  if (!x) return null;
+  if (cat.mode === "name") x = stripLead(x);
+  if (cat.refs) x = x.replace(/\b([a-z]+) (?=\d)/g, (m, w) => (ABBR[w] || w) + " ");
+  const padded = " " + x + " ";
+  let best = null;
+  for (const item of cat.a.concat(cat.n)) {
+    for (const k of item.keys) {
+      let s;
+      const d = lev(x, k);
+      const at = padded.indexOf(" " + k + " ");
+      if (d <= thr(k)) s = d;
+      else if (k.length >= 3 && at >= 0) {
+        /* "isaiah 1" must not accept "isaiah 1 19": a reference can't be followed by another number */
+        if (cat.refs && /\d/.test(k) && /^\d/.test(padded.slice(at + k.length + 2))) continue;
+        s = cat.mode === "kw" ? 0.5 + (40 - Math.min(k.length, 39)) / 100 : 1.2 - k.length / 100;
+      }
+      else continue;
+      if (cat.mode === "kw" && d === 0) s = 0;
+      s += item.miss ? 0.05 : 0;
+      if (!best || s < best.s) best = { item, s };
+    }
+  }
+  return best ? best.item : null;
+}
+
+/* ---------- State ---------- */
+const TEAM_COLORS = ["#FF3D9A", "#FFD23F", "#3FA9FF", "#5FD43A", "#FF8A3D", "#A66BFF", "#2EE6D6", "#FF4B4B"];
+const KEY = "one-in-a-millennium-v1";
+const STUDY_IDS = CATS.filter(c => c.group === "study" || c.group === "dm").map(c => c.id);
+function fresh(teams) {
+  return { phase: "setup", teams: teams || ["Team 1", "Team 2", "Team 3"], timer: 60, picked: STUDY_IDS.slice(), order: [], round: 0, history: [], drafts: {} };
+}
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(KEY));
+    if (s && s.phase && Array.isArray(s.teams)) { s.picked = (s.picked || []).filter(id => CAT[id]); s.order = (s.order || []).filter(id => CAT[id]); return s; }
+  } catch (e) {}
+  return null;
+}
+const DEMO = location.hash === "#climb-demo"; /* sample climb for previewing; never saved */
+function save() { if (DEMO) return; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+let S = load() || fresh();
+if (DEMO) {
+  const levels = [[5, 5, 4, 5], [4, 3, 4, 3], [3, 2, 2, 3], [1, 1, 2, 1]];
+  S = Object.assign(fresh(["Lions", "Prophets", "Watchmen", "Sheep Squad"]), {
+    phase: "climb", round: 3, order: STUDY_IDS.slice(0, 6),
+    history: [0, 1, 2, 3].map(r => ({ cat: STUDY_IDS[r], entries: levels.map(l => ({ text: "demo", d: null, override: "yes", ot: l[r] })) }))
+  });
+}
+if (S.phase !== "setup" && !S.order.length) S = fresh(S.teams);
+let anim = false;
+const T = { left: 0, running: false, iv: null, done: false };
+
+function shuffle(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+function teamName(i) { return (S.teams[i] || "").trim() || `Team ${i + 1}`; }
+
+function roundPoints(r) {
+  return r.entries.map(e => {
+    if (e.override === "no") return 0;
+    if (e.d && !e.miss && TIERS[e.t]) return TIERS[e.t].pts;
+    if (e.override === "yes") return TIERS[e.ot || 1].pts;
+    return 0;
+  });
+}
+function totals() {
+  const t = S.teams.map(() => 0);
+  S.history.forEach(r => { if (r) roundPoints(r).forEach((p, i) => { if (i < t.length) t[i] += p; }); });
+  return t;
+}
+
+/* ---------- Rendering ---------- */
+const app = document.getElementById("app");
+const endBtn = document.getElementById("btn-end");
+
+function render() {
+  stopClimb();
+  endBtn.hidden = S.phase === "setup";
+  endBtn.textContent = "End game";
+  endBtn.dataset.armed = "";
+  if (S.phase === "setup") renderSetup();
+  else if (S.phase === "round") renderRound();
+  else if (S.phase === "reveal") renderReveal();
+  else if (S.phase === "climb") renderClimb();
+  else renderFinal();
+  save();
+}
+
+/* ---------- Pixel art ---------- */
+const PIX_COLORS = { k: "#1B1035", w: "#FFFFFF", g: "#5FD43A", G: "#2E9E1F", b: "#3FA9FF", B: "#1C6FD1", p: "#B07CFF", c: "#FFF0B8", y: "#FFD23F", o: "#FF8A3D", r: "#FF3D9A" };
+const PIX = {
+  1: [ /* sheep */
+    "...wwwww..", "..wwwwwww.", "kkwwwwwwww", "kwkwwwwwww", "kkkwwwwwww", ".kwwwwwww.", "..k.k.k.k.", "..k.k.k.k." ],
+  2: [ /* scriptures */
+    ".kkkkkkkk.", "kgggggggGk", "kgwwwwwgGk", "kggggggggk", "kgwwwwggGk", "kggggggggk", "kGGGGGGGGk", ".kkkkkkkk." ],
+  3: [ /* fish (fishers of men) */
+    "..........", "....bbb..b", "..bbbbbbbb", ".bkbbbbbBb", ".bbbbbbbBb", "..bbbbbbbb", "....bbb..b", ".........." ],
+  4: [ /* scroll */
+    ".pppppppp.", "pkccccccpk", ".ckckkckc.", ".cccccccc.", ".ckkckckc.", ".cccccccc.", "pkccccccpk", ".pppppppp." ],
+  5: [ /* star */
+    "....yy....", "....yy....", "...yooy...", "yyyyyyyyyy", ".yyyoyyyy.", "..yyyyyy..", ".yyy..yyy.", ".yy....yy." ]
+};
+function pixSVG(map) {
+  const h = map.length, w = map[0].length;
+  let rects = "";
+  map.forEach((row, y) => [...row].forEach((ch, x) => { if (PIX_COLORS[ch]) rects += `<rect x="${x}" y="${y}" width="1" height="1" fill="${PIX_COLORS[ch]}"/>`; }));
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -1 ${w} ${w}" shape-rendering="crispEdges">${rects}</svg>`;
+}
+function pixURI(map) { return `url("data:image/svg+xml,${encodeURIComponent(pixSVG(map))}")`; }
+(function injectPixelArt() {
+  let css = [1, 2, 3, 4, 5].map(t => `.chip.tier-${t}::before{background-image:${pixURI(PIX[t])}}`).join("");
+  /* pixel clouds: one 10px block repeated with box-shadow */
+  const rows = [[3, 5], [2, 7], [1, 9], [0, 10]];
+  const sh = [];
+  rows.forEach(([a, b], y) => { for (let x = a; x <= b; x++) sh.push(`${x * 10}px ${y * 10}px 0 #fff`); });
+  css += `.cloud{box-shadow:${sh.join(",")}}`;
+  css += `.logo{background-image:${pixURI(PIX[5])};background-size:100% 100%;display:block}`;
+  const st = document.createElement("style"); st.textContent = css; document.head.appendChild(st);
+})();
+
+function gaugeHTML() {
+  return `<div class="gauge" aria-label="Scoring levels">
+    ${[5, 4, 3, 2, 1].map(t => `<div class="lvl"><span class="ico">${pixSVG(PIX[t])}</span><span class="lbl">${TIERS[t].name}</span>
+      <span class="track"><span class="bar bg-${t}" style="display:block;width:${TIERS[t].pts}%"></span></span>
+      <span class="pts">${TIERS[t].pts}</span></div>`).join("")}
+    <div class="gauge-cap">Every team with a correct answer gets full points, even if another team said the same thing.</div>
+  </div>`;
+}
+
+function renderSetup() {
+  app.innerHTML = `
+  <section class="setup">
+    <div class="setup-hero">
+      <div>
+        <span class="eyebrow">How it works</span>
+        <h2>Everyone knows Daniel. Who remembers Ebed-melech?</h2>
+        <p>Each round gives a category with lots of right answers. Teams write one answer. The fewer people who'd think of it, the more it's worth. You type each team's answer in, then reveal them together.</p>
+      </div>
+      <div class="panel">${gaugeHTML()}</div>
+    </div>
+
+    <div class="panel">
+      <h2>Teams</h2>
+      <p class="sub">Up to eight teams. Use first names or team names only.</p>
+      <div class="team-list" id="team-list">
+        ${S.teams.map((t, i) => `<div class="team-row">
+          <span class="swatch" style="background:${TEAM_COLORS[i]}"></span>
+          <input class="field" id="team-${i}" data-team="${i}" value="${esc(t)}" maxlength="24" aria-label="Team ${i + 1} name">
+          <button class="icon-btn" type="button" data-remove="${i}" aria-label="Remove ${esc(teamName(i))}" ${S.teams.length <= 1 ? "disabled" : ""}>×</button>
+        </div>`).join("")}
+      </div>
+      <button class="btn small" type="button" id="add-team" ${S.teams.length >= 8 ? "disabled" : ""}>Add team</button>
+
+      <div style="margin-top:24px">
+        <h2>Timer</h2>
+        <p class="sub">How long teams get to think each round.</p>
+        <div class="seg" role="group" aria-label="Timer length">
+          ${[30, 45, 60, 90, 0].map(v => `<button type="button" data-timer="${v}" aria-pressed="${S.timer === v}">${v ? v + "s" : "Off"}</button>`).join("")}
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Categories</h2>
+      <p class="sub">Each one you pick is one round. They're played in a random order.</p>
+      ${GROUPS.map(g => {
+        const cats = CATS.filter(c => c.group === g.id);
+        const allOn = cats.every(c => S.picked.includes(c.id));
+        return `<div class="cat-group">
+          <div class="row-between">
+            <div><h3>${esc(g.title)}</h3><span class="note-txt" style="font-size:1.05rem">${esc(g.sub)}</span></div>
+            <button class="btn small ghost" type="button" data-group="${g.id}">${allOn ? "Clear" : "Select all"}</button>
+          </div>
+          <div class="cat-list">
+            ${cats.map(c => `<label class="chk">
+              <input type="checkbox" id="cat-${c.id}" data-cat="${c.id}" ${S.picked.includes(c.id) ? "checked" : ""}>
+              <span><strong>${esc(c.title)}</strong><small>${c.diff} · ${c.a.length} answers</small></span>
+            </label>`).join("")}
+          </div>
+        </div>`;
+      }).join("")}
+    </div>
+
+    <div class="start-bar">
+      <span class="note">${S.picked.length} round${S.picked.length === 1 ? "" : "s"} · about ${Math.max(5, Math.round(S.picked.length * ((S.timer || 60) + 75) / 60))} minutes</span>
+      <button class="btn primary big" type="button" id="start" ${S.picked.length ? "" : "disabled"}>Start game</button>
+    </div>
+  </section>`;
+
+  app.querySelectorAll("[data-team]").forEach(inp => inp.addEventListener("input", () => { S.teams[+inp.dataset.team] = inp.value; save(); }));
+  app.querySelectorAll("[data-remove]").forEach(b => b.addEventListener("click", () => { S.teams.splice(+b.dataset.remove, 1); render(); }));
+  document.getElementById("add-team").addEventListener("click", () => { S.teams.push(`Team ${S.teams.length + 1}`); render(); document.getElementById(`team-${S.teams.length - 1}`)?.select(); });
+  app.querySelectorAll("[data-timer]").forEach(b => b.addEventListener("click", () => { S.timer = +b.dataset.timer; render(); }));
+  app.querySelectorAll("[data-cat]").forEach(cb => cb.addEventListener("change", () => {
+    const id = cb.dataset.cat;
+    S.picked = cb.checked ? CATS.map(c => c.id).filter(x => x === id || S.picked.includes(x)) : S.picked.filter(x => x !== id);
+    render();
+  }));
+  app.querySelectorAll("[data-group]").forEach(b => b.addEventListener("click", () => {
+    const ids = CATS.filter(c => c.group === b.dataset.group).map(c => c.id);
+    const allOn = ids.every(id => S.picked.includes(id));
+    S.picked = allOn ? S.picked.filter(id => !ids.includes(id)) : CATS.map(c => c.id).filter(id => ids.includes(id) || S.picked.includes(id));
+    render();
+  }));
+  document.getElementById("start").addEventListener("click", startGame);
+}
+
+function startGame() {
+  S.teams = S.teams.map((t, i) => t.trim() || `Team ${i + 1}`);
+  S.order = shuffle(S.picked);
+  S.round = 0; S.history = []; S.drafts = {};
+  S.phase = "round";
+  resetTimer();
+  render();
+  window.scrollTo({ top: 0 });
+}
+
+function scoreboardHTML() {
+  const t = totals();
+  const max = Math.max(...t);
+  return `<aside class="panel scores">
+    <h2>Scores</h2>
+    <ul class="score-list">
+      ${S.teams.map((_, i) => `<li class="${max > 0 && t[i] === max ? "lead" : ""}">
+        <span class="swatch" style="background:${TEAM_COLORS[i]}"></span>
+        <span class="nm">${esc(teamName(i))}</span>
+        <span class="sc">${t[i]}</span></li>`).join("")}
+    </ul>
+    <div class="progress-dots" aria-label="Round ${S.round + 1} of ${S.order.length}">
+      ${S.order.map((_, i) => `<i class="${i < S.round || (i === S.round && S.phase === "reveal") ? "on" : i === S.round ? "now" : ""}"></i>`).join("")}
+    </div>
+  </aside>`;
+}
+
+function promptHTML(cat, withTimer) {
+  return `<div class="panel prompt-card">
+    <div class="prompt-wrap">
+      <div>
+        <div class="prompt-meta">
+          <span class="eyebrow">Round ${S.round + 1} of ${S.order.length}</span>
+          <span class="diff">${cat.diff}</span>
+        </div>
+        <h2 class="prompt">${esc(cat.prompt)}</h2>
+        <p class="prompt-note">${esc(cat.note)}</p>
+      </div>
+      ${withTimer && S.timer ? `<div class="timer">
+        <div class="clock" id="ring">
+          <div class="num" id="ring-num" aria-live="off">${T.left}</div>
+          <div class="segs" id="segs" aria-hidden="true">${"<i></i>".repeat(20)}</div>
+        </div>
+        <div class="ctrls">
+          <button class="btn small primary" type="button" id="t-go">Start timer</button>
+          <button class="btn small" type="button" id="t-add" aria-label="Add 15 seconds">+15</button>
+          <button class="btn small" type="button" id="t-reset">Reset</button>
+        </div>
+      </div>` : ""}
+    </div>
+  </div>`;
+}
+
+function renderRound() {
+  const cat = CAT[S.order[S.round]];
+  app.innerHTML = `<section class="stage">
+    <div class="main-col">
+      ${promptHTML(cat, true)}
+      <div class="panel">
+        <div class="row-between">
+          <div><h2>Team answers</h2><p class="sub" style="margin:0">When time's up, type each team's answer. Typing is hidden so the room can't see it.</p></div>
+          <button class="btn small ghost" type="button" id="peek" aria-pressed="false">Show typing</button>
+        </div>
+        <div class="entry-list" style="margin-top:16px">
+          ${S.teams.map((_, i) => `<div class="entry">
+            <label for="ans-${i}"><span class="swatch" style="background:${TEAM_COLORS[i]}"></span>${esc(teamName(i))}</label>
+            <input class="field ans masked" id="ans-${i}" data-ans="${i}" value="${esc(S.drafts[i] || "")}" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Answer">
+          </div>`).join("")}
+        </div>
+        <div class="entry-foot">
+          <button class="btn ghost small" type="button" id="skip">Skip this category</button>
+          <button class="btn primary big" type="button" id="reveal">Reveal answers</button>
+        </div>
+      </div>
+    </div>
+    ${scoreboardHTML()}
+  </section>`;
+
+  app.querySelectorAll("[data-ans]").forEach((inp, idx, all) => {
+    inp.addEventListener("input", () => { S.drafts[inp.dataset.ans] = inp.value; save(); });
+    inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); (all[idx + 1] || document.getElementById("reveal")).focus(); } });
+  });
+  document.getElementById("peek").addEventListener("click", e => {
+    const on = e.currentTarget.getAttribute("aria-pressed") !== "true";
+    e.currentTarget.setAttribute("aria-pressed", on);
+    e.currentTarget.textContent = on ? "Hide typing" : "Show typing";
+    app.querySelectorAll(".ans").forEach(i => i.classList.toggle("masked", !on));
+  });
+  document.getElementById("reveal").addEventListener("click", doReveal);
+  document.getElementById("skip").addEventListener("click", () => {
+    stopTimer();
+    S.order.splice(S.round, 1); S.drafts = {};
+    if (S.round >= S.order.length) S.phase = S.history.filter(Boolean).length ? "final" : "setup";
+    resetTimer(); render();
+  });
+  if (S.timer) {
+    document.getElementById("t-go").addEventListener("click", toggleTimer);
+    document.getElementById("t-add").addEventListener("click", () => { T.left += 15; T.done = false; paintTimer(); });
+    document.getElementById("t-reset").addEventListener("click", () => { stopTimer(); resetTimer(); paintTimer(); });
+    paintTimer();
+  }
+}
+
+/* Timer */
+let audioCtx = null;
+function beep(freq, dur) {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain(), t0 = audioCtx.currentTime;
+    o.type = "square"; o.frequency.value = freq; o.connect(g); g.connect(audioCtx.destination);
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.12, t0 + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.start(t0); o.stop(t0 + dur + 0.05);
+  } catch (e) {}
+}
+function resetTimer() { T.left = S.timer; T.running = false; T.done = false; clearInterval(T.iv); T.iv = null; }
+function stopTimer() { T.running = false; clearInterval(T.iv); T.iv = null; }
+function toggleTimer() {
+  if (T.running) { stopTimer(); }
+  else {
+    if (T.left <= 0) { T.left = S.timer; T.done = false; }
+    beep(520, 0.15);
+    T.running = true;
+    T.iv = setInterval(() => {
+      T.left = Math.max(0, T.left - 1);
+      if (T.left > 0 && T.left <= 5) beep(700, 0.12);
+      if (T.left === 0) { stopTimer(); T.done = true; beep(440, 0.9); }
+      paintTimer();
+    }, 1000);
+  }
+  paintTimer();
+}
+function paintTimer() {
+  const ring = document.getElementById("ring");
+  if (!ring) return;
+  const total = Math.max(S.timer, T.left);
+  document.getElementById("ring-num").textContent = T.left;
+  const lit = Math.ceil((T.left / total) * 20);
+  [...document.getElementById("segs").children].forEach((seg, i) => seg.classList.toggle("on", i < lit));
+  ring.classList.toggle("low", T.left <= 10);
+  ring.classList.toggle("done", T.done);
+  const go = document.getElementById("t-go");
+  if (go) go.textContent = T.running ? "Pause" : T.done ? "Restart" : T.left < S.timer ? "Resume" : "Start timer";
+}
+
+function doReveal() {
+  stopTimer();
+  const cat = CAT[S.order[S.round]];
+  const entries = S.teams.map((_, i) => makeEntry(cat, S.drafts[i] || ""));
+  S.history[S.round] = { cat: cat.id, entries };
+  S.phase = "reveal";
+  anim = true;
+  editing = null;
+  render();
+  window.scrollTo({ top: 0 });
+}
+
+function makeEntry(cat, raw, orig) {
+  const text = String(raw).trim();
+  const m = text ? matchAnswer(cat, text) : null;
+  const base = { text, orig: orig === undefined ? text : orig, override: null };
+  return m ? { ...base, d: m.d, t: m.t || 0, r: m.r, miss: m.miss, note: m.note || "", why: m.why || "" }
+           : { ...base, d: null, t: 0, r: "", miss: false, note: "" };
+}
+let editing = null;
+let showRare = false; /* rare-answers panel on the reveal screen, hidden until the leader asks */
+
+function renderReveal() {
+  const r = S.history[S.round];
+  const cat = CAT[r.cat];
+  const pts = roundPoints(r);
+  const last = S.round >= S.order.length - 1;
+
+  const rows = r.entries.map((e, i) => {
+    if (editing === i) {
+      return `<div class="rv" style="--team:${TEAM_COLORS[i]}">
+        <div style="min-width:0">
+          <div class="who">${esc(teamName(i))}</div>
+          <form class="fix" data-fix="${i}">
+            <input class="field" id="fix-${i}" value="${esc(e.text)}" autocomplete="off" autocorrect="off" spellcheck="false" aria-label="Corrected answer for ${esc(teamName(i))}" placeholder="Type the answer">
+            <button class="btn small primary" type="submit">Recheck</button>
+            <button class="btn small ghost" type="button" data-cancel>Cancel</button>
+          </form>
+          <div class="detail"><span class="note-txt">${e.orig ? `The team wrote “${esc(e.orig)}”. Fix the spelling or wording, then recheck.` : "Type the team's answer, then check it."}</span></div>
+        </div>
+        <div class="side"><div class="pts">+${pts[i]}<small>POINTS</small></div></div>
+      </div>`;
+    }
+    const valid = e.d && !e.miss && e.override !== "no";
+    let detail;
+    if (!e.text) detail = `<span class="note-txt">No answer</span>`;
+    else if (valid) {
+      detail = `<span class="chip tier-${e.t}">${TIERS[e.t].name}</span><span>${norm(e.text) === norm(e.d) ? "" : "Counted as <b>" + esc(e.d) + "</b>"}</span><span class="ref">${esc(e.r)}</span>${e.why ? `<span class="why${cat.group === "dm" ? "" : " matters"}">${esc(e.why)}</span>` : ""}`;
+    } else if (e.override === "no") detail = `<span class="chip miss">Not counted</span><span class="note-txt">Leader ruled this out</span>`;
+    else if (e.override === "yes") detail = `<span class="chip tier-${e.ot || 1}">${TIERS[e.ot || 1].name}</span><span class="note-txt">Counted by the leader</span>`;
+    else if (e.miss) detail = `<span class="chip miss">Close, but no</span><span class="note-txt">${esc(e.note)}</span><span class="ref">${esc(e.r)}</span>`;
+    else detail = `<span class="chip miss">Not on the list</span><span class="note-txt">Fix the spelling and recheck, or count it if you agree.</span>`;
+    if (e.orig && e.orig !== e.text) detail += `<span class="note-txt">Corrected from “${esc(e.orig)}”</span>`;
+    const fixBtn = `<button class="btn small ghost" type="button" data-edit="${i}">${e.text ? "Fix spelling" : "Add answer"}</button>`;
+    const ovr = fixBtn + (!e.text ? "" : valid
+      ? `<button class="btn small ghost" type="button" data-ovr="${i}" data-val="no">Don't count</button>`
+      : e.override === "no"
+        ? `<button class="btn small ghost" type="button" data-ovr="${i}" data-val="">Undo</button>`
+        : `<select class="lvl-select" id="lvl-${i}" data-level="${i}" aria-label="Count ${esc(teamName(i))}'s answer as">
+            <option value="">${e.override === "yes" ? "Don't count" : "Count it as…"}</option>
+            ${[1, 2, 3, 4, 5].map(t => `<option value="${t}" ${e.override === "yes" && (e.ot || 1) === t ? "selected" : ""}>${TIERS[t].name} (${TIERS[t].pts})</option>`).join("")}
+          </select>`);
+    return `<div class="rv ${valid && e.t === 5 && pts[i] ? "top" : ""}" style="--team:${TEAM_COLORS[i]};--i:${i}">
+      <div style="min-width:0">
+        <div class="who">${esc(teamName(i))}</div>
+        <div class="said ${e.text ? "" : "blank"}">${e.text ? esc(e.text) : "—"}</div>
+        <div class="detail">${detail}</div>
+      </div>
+      <div class="side"><div class="pts">+${pts[i]}<small>POINTS</small></div><div class="btns">${ovr}</div></div>
+    </div>`;
+  }).join("");
+
+  const given = new Set(r.entries.filter(e => e.d && !e.miss && e.override !== "no").map(e => e.d));
+  const rare = cat.a.filter(a => !given.has(a.d) && a.t >= 3).sort((a, b) => b.t - a.t).slice(0, 8);
+  app.innerHTML = `<section class="stage solo">
+    <div class="main-col">
+      <div class="panel prompt-card" style="padding:22px 28px">
+        <div class="prompt-meta"><span class="eyebrow">Round ${S.round + 1} of ${S.order.length} · Reveal</span></div>
+        <h2 class="prompt" style="font-size:clamp(0.85rem,1.8vw,1.2rem)">${esc(cat.prompt)}</h2>
+      </div>
+      <div class="reveal-list ${anim ? "anim" : ""}">${rows}</div>
+      <div class="panel" id="rare-panel" ${showRare ? "" : "hidden"}>
+        <h2>Rare answers nobody said</h2>
+        ${rare.length
+          ? `<p class="sub">The highest-scoring answers still on the table.</p>
+             <div class="missed">${rare.map(a => `<div class="m"><span class="chip tier-${a.t}" style="align-self:flex-start">${TIERS[a.t].name}</span><b>${esc(a.d)}</b><span class="ref">${esc(a.r)}</span>${a.why ? `<span class="note-txt" style="font-size:1rem">${esc(a.why)}</span>` : ""}</div>`).join("")}</div>`
+          : `<p class="sub" style="margin:0">Every rare answer was taken. Impressive.</p>`}
+      </div>
+      <div class="nav-foot" style="justify-content:space-between">
+        <button class="btn" type="button" id="rare-toggle" aria-expanded="${showRare}" aria-controls="rare-panel">${showRare ? "Hide rare answers" : "Show rare answers"}</button>
+        <button class="btn primary big" type="button" id="next">See the Ascent</button>
+      </div>
+    </div>
+  </section>`;
+  anim = false;
+
+  app.querySelectorAll("[data-ovr]").forEach(b => b.addEventListener("click", () => {
+    r.entries[+b.dataset.ovr].override = b.dataset.val || null;
+    render();
+  }));
+  app.querySelectorAll("[data-level]").forEach(sel => sel.addEventListener("change", () => {
+    const e = r.entries[+sel.dataset.level];
+    if (sel.value) { e.override = "yes"; e.ot = +sel.value; }
+    else { e.override = null; delete e.ot; }
+    render();
+  }));
+  app.querySelectorAll("[data-edit]").forEach(b => b.addEventListener("click", () => {
+    editing = +b.dataset.edit;
+    render();
+    const inp = document.getElementById(`fix-${editing}`);
+    if (inp) { inp.focus(); inp.select(); }
+  }));
+  app.querySelectorAll("[data-fix]").forEach(f => {
+    f.addEventListener("submit", ev => {
+      ev.preventDefault();
+      const i = +f.dataset.fix;
+      const old = r.entries[i];
+      r.entries[i] = makeEntry(cat, document.getElementById(`fix-${i}`).value, old.orig || "");
+      editing = null;
+      render();
+    });
+    f.querySelector("[data-cancel]").addEventListener("click", () => { editing = null; render(); });
+    f.querySelector("input").addEventListener("keydown", ev => { if (ev.key === "Escape") { editing = null; render(); } });
+  });
+  document.getElementById("rare-toggle").addEventListener("click", e => {
+    showRare = !showRare;
+    const panel = document.getElementById("rare-panel");
+    panel.hidden = !showRare;
+    e.currentTarget.setAttribute("aria-expanded", String(showRare));
+    e.currentTarget.textContent = showRare ? "Hide rare answers" : "Show rare answers";
+    if (showRare) panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  });
+  document.getElementById("next").addEventListener("click", () => {
+    showRare = false;
+    S.phase = "climb";
+    render();
+    window.scrollTo({ top: 0 });
+  });
+}
+
+/* ---------- The climb: team stars rise from the plain toward the Sun ---------- */
+const CL = { W: 320, H: 200, GROUND: 22, PEAK: 180, SPACE: 600, STARS: 820, MOON: 1150, SUN: 1760, TOP: 1880 };
+const MILESTONES = [[CL.PEAK, "the mountaintop"], [CL.SPACE, "outer space"], [CL.STARS, "the stars"], [CL.MOON, "the Moon"], [CL.SUN, "the Sun"]];
+const SKY_STOPS = [[0, "#8FE0FF"], [260, "#4FC3F7"], [440, "#2F7BE0"], [610, "#1D2A78"], [820, "#0B0620"]];
+let climbRaf = null;
+function stopClimb() { if (climbRaf) cancelAnimationFrame(climbRaf); climbRaf = null; }
+function sunPoints() { return Math.max(250, Math.round(S.order.length * 100 * 0.5)); }
+function altFor(p) { return Math.min(CL.TOP - 30, CL.GROUND + (p / sunPoints()) * (CL.SUN - CL.GROUND)); }
+function ptsAt(alt) { return Math.round(((alt - CL.GROUND) / (CL.SUN - CL.GROUND)) * sunPoints()); }
+function totalsBefore(n) {
+  const t = S.teams.map(() => 0);
+  S.history.slice(0, n).forEach(r => { if (r) roundPoints(r).forEach((p, i) => { if (i < t.length) t[i] += p; }); });
+  return t;
+}
+const rgbOf = h => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+const skyCache = new Map();
+function skyAt(y) {
+  const band = Math.floor(y / 14) * 14;
+  if (skyCache.has(band)) return skyCache.get(band);
+  let col = SKY_STOPS[SKY_STOPS.length - 1][1];
+  for (let i = 0; i < SKY_STOPS.length - 1; i++) {
+    const [y0, c0] = SKY_STOPS[i], [y1, c1] = SKY_STOPS[i + 1];
+    if (band <= y1) {
+      const f = Math.max(0, (band - y0) / (y1 - y0)), a = rgbOf(c0), b = rgbOf(c1);
+      col = `rgb(${a.map((v, j) => Math.round(v + (b[j] - v) * f)).join(",")})`;
+      break;
+    }
+  }
+  skyCache.set(band, col);
+  return col;
+}
+const STARFIELD = (() => {
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const out = [];
+  for (let i = 0; i < 420; i++) {
+    const y = 460 + Math.pow(rnd(), 0.7) * (CL.TOP + 60 - 460);
+    out.push({ x: Math.floor(rnd() * CL.W), y, big: rnd() > 0.88, ph: rnd() * 6.28 });
+  }
+  return out;
+})();
+const CLOUDS = [[34, 250], [196, 318], [96, 392], [252, 468]];
+const STAR_SPRITE = PIX[5];
+
+function drawClimb(ctx, cam, now, stars, banner) {
+  const H = CL.H, W = CL.W;
+  const sy = y => Math.round(H - (y - cam));
+  /* sky, in stepped bands */
+  for (let s = 0; s < H; s += 2) { ctx.fillStyle = skyAt(cam + (H - s)); ctx.fillRect(0, s, W, 2); }
+  /* starfield */
+  STARFIELD.forEach(st => {
+    const s = sy(st.y); if (s < -2 || s > H) return;
+    const tw = Math.sin(now / 400 + st.ph) > 0.6;
+    ctx.fillStyle = tw ? "#FFD23F" : "#FFFFFF";
+    const z = st.big ? 2 : 1;
+    ctx.fillRect(st.x, s, z, z);
+  });
+  /* clouds */
+  const rows = [[3, 5], [2, 7], [1, 9], [0, 10]];
+  CLOUDS.forEach(([cx, cy]) => {
+    const top = sy(cy); if (top < -20 || top > H + 4) return;
+    ctx.fillStyle = "#FFFFFF";
+    rows.forEach(([a, b], r) => ctx.fillRect(cx + a * 3, top + r * 3, (b - a + 1) * 3, 3));
+  });
+  /* moon */
+  const disc = (cx, cy, r, fill) => {
+    for (let dy = -r; dy <= r; dy += 2) {
+      const w = Math.round(Math.sqrt(r * r - dy * dy) / 2) * 2;
+      const s = sy(cy + dy); if (s < -2 || s > H + 2) continue;
+      ctx.fillStyle = fill; ctx.fillRect(cx - w, s, w * 2, 2);
+    }
+  };
+  if (Math.abs(CL.MOON - (cam + H / 2)) < H) {
+    disc(252, CL.MOON, 26, "#F1EBD0");
+    disc(244, CL.MOON + 8, 6, "#CFC6A8"); disc(262, CL.MOON - 6, 4, "#CFC6A8"); disc(252, CL.MOON - 14, 3, "#CFC6A8");
+  }
+  /* sun */
+  if (Math.abs(CL.SUN - (cam + H / 2)) < H + 40) {
+    const pulse = Math.sin(now / 300) > 0 ? 2 : 0;
+    ctx.fillStyle = "#FF8A3D";
+    for (let k = 0; k < 8; k++) {
+      const ang = k * Math.PI / 4, r1 = 46, r2 = 60 + pulse;
+      for (let r = r1; r < r2; r += 2) {
+        const x = Math.round(160 + Math.cos(ang) * r), s = sy(CL.SUN + Math.sin(ang) * r);
+        ctx.fillRect(x - 2, s - 2, 4, 4);
+      }
+    }
+    disc(160, CL.SUN, 42, "#FF8A3D");
+    disc(160, CL.SUN, 36, "#FFD23F");
+    disc(156, CL.SUN + 6, 20, "#FFF3A0");
+  }
+  /* small green hill and the big mountain */
+  const mount = (px, peak, half, light, dark, snowLine) => {
+    for (let y = CL.GROUND; y <= peak; y += 2) {
+      const s = sy(y); if (s < -2 || s > H + 2) continue;
+      const w = Math.round(((peak - y) / (peak - CL.GROUND)) * half / 2) * 2;
+      const snow = snowLine && y > peak - snowLine + ((y / 2) % 3 === 0 ? 4 : 0);
+      ctx.fillStyle = snow ? "#FFFFFF" : light; ctx.fillRect(px - w, s - 2, w, 2);
+      ctx.fillStyle = snow ? "#D9D4E8" : dark; ctx.fillRect(px, s - 2, w, 2);
+    }
+  };
+  mount(66, 74, 150, "#3FBF2A", "#2E9E1F", 0);
+  mount(238, CL.PEAK, 250, "#9C8CC0", "#6E5E99", 38);
+  /* grassy plain */
+  for (let y = 0; y < CL.GROUND; y += 2) {
+    const s = sy(y + 2); if (s < -2 || s > H + 2) continue;
+    ctx.fillStyle = y >= CL.GROUND - 6 ? "#5FD43A" : y >= CL.GROUND - 12 ? "#2E9E1F" : "#8B5A2B";
+    ctx.fillRect(0, s, W, 2);
+  }
+  const grassTop = sy(CL.GROUND);
+  if (grassTop > -4 && grassTop < H + 4) {
+    ctx.fillStyle = "#2E9E1F";
+    for (let x = 2; x < W; x += 7) ctx.fillRect(x, grassTop - 2, 2, 2);
+  }
+  /* team stars */
+  ctx.textAlign = "center"; ctx.textBaseline = "alphabetic"; ctx.lineJoin = "round";
+  ctx.font = '8px "Press Start 2P", monospace';
+  stars.forEach(st => {
+    const bottom = sy(st.alt);
+    if (bottom > H + 4 || bottom < 14) {
+      /* outside the view: arrow and score at that edge */
+      const down = bottom > H + 4, score = String(Math.round(st.shown));
+      const bw = ctx.measureText(score).width + 16, bx = Math.round(st.x - bw / 2), by = down ? H - 13 : 1;
+      ctx.fillStyle = "#1B1035"; ctx.fillRect(bx, by, bw, 12);
+      ctx.fillStyle = st.color;
+      if (down) { ctx.fillRect(bx + 2, by + 3, 6, 2); ctx.fillRect(bx + 3, by + 5, 4, 2); ctx.fillRect(bx + 4, by + 7, 2, 2); }
+      else { ctx.fillRect(bx + 4, by + 3, 2, 2); ctx.fillRect(bx + 3, by + 5, 4, 2); ctx.fillRect(bx + 2, by + 7, 6, 2); }
+      ctx.textAlign = "left"; ctx.fillText(score, bx + 11, by + 10); ctx.textAlign = "center";
+      return;
+    }
+    const sc = 2, w = 10 * sc, h = 8 * sc, x0 = Math.round(st.x - w / 2), y0 = bottom - h;
+    /* sparkle trail while rising */
+    if (st.moving) {
+      for (let k = 1; k <= 6; k++) {
+        if ((Math.floor(now / 60) + k) % 2) continue;
+        ctx.fillStyle = k < 3 ? "#FFFFFF" : st.color;
+        ctx.fillRect(st.x - 3 + ((k * 3) % 5), bottom + k * 5, 2, 2);
+      }
+    }
+    const paint = (dx, dy, col) => STAR_SPRITE.forEach((row, ry) => [...row].forEach((ch, rx) => {
+      if (ch === ".") return;
+      ctx.fillStyle = col || (ch === "o" ? "#FFFFFF" : st.color);
+      ctx.fillRect(x0 + rx * sc + dx, y0 + ry * sc + dy, sc, sc);
+    }));
+    [[-2, 0], [2, 0], [0, -2], [0, 2]].forEach(([dx, dy]) => paint(dx, dy, "#1B1035"));
+    paint(0, 0);
+    ctx.lineWidth = 3; ctx.strokeStyle = "#1B1035";
+    ctx.strokeText(st.label, st.x, y0 - 5); ctx.fillStyle = "#FFFFFF"; ctx.fillText(st.label, st.x, y0 - 5);
+    const score = String(Math.round(st.shown));
+    ctx.strokeText(score, st.x, bottom + 11); ctx.fillStyle = "#FFD23F"; ctx.fillText(score, st.x, bottom + 11);
+  });
+  /* altitude ruler on the right: the whole trip, with every team on it */
+  const RX = W - 11, RT = 8, RB = H - 8, RH = RB - RT;
+  const ry = alt => Math.round(RB - (Math.min(alt, CL.TOP) / CL.TOP) * RH);
+  ctx.fillStyle = "#1B1035"; ctx.fillRect(RX - 2, RT - 2, 9, RH + 4);
+  for (let s = RT; s < RB; s += 2) {
+    const alt = ((RB - s) / RH) * CL.TOP;
+    ctx.fillStyle = alt < CL.GROUND + 8 ? "#5FD43A" : skyAt(alt); ctx.fillRect(RX, s, 5, 2);
+  }
+  ctx.fillStyle = "#9C8CC0"; ctx.fillRect(RX + 1, ry(CL.PEAK), 3, ry(CL.GROUND) - ry(CL.PEAK));
+  ctx.fillStyle = "#F1EBD0"; ctx.fillRect(RX + 1, ry(CL.MOON) - 1, 3, 3);
+  ctx.fillStyle = "#FFD23F"; ctx.fillRect(RX, ry(CL.SUN) - 2, 5, 5);
+  /* the part of the trip on screen */
+  ctx.strokeStyle = "#FFFFFF"; ctx.lineWidth = 1;
+  ctx.strokeRect(RX - 1.5, ry(cam + H) - 0.5, 8, Math.max(2, ry(cam) - ry(cam + H)));
+  stars.forEach(st => {
+    const y = ry(st.alt);
+    ctx.fillStyle = "#1B1035"; ctx.fillRect(RX - 9, y - 2, 7, 5);
+    ctx.fillStyle = st.color; ctx.fillRect(RX - 8, y - 1, 5, 3);
+  });
+
+  /* milestone banner */
+  if (banner) {
+    const tw = ctx.measureText(banner).width + 16;
+    ctx.fillStyle = "#1B1035"; ctx.fillRect((W - tw) / 2, 6, tw, 18);
+    ctx.fillStyle = "#FFD23F"; ctx.fillRect((W - tw) / 2, 22, tw, 2);
+    ctx.fillStyle = "#FFFFFF"; ctx.fillText(banner, W / 2, 19);
+  }
+}
+
+function startClimb(canvas) {
+  stopClimb();
+  const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
+  const before = totalsBefore(S.round), after = totals();
+  const n = S.teams.length;
+  const spacing = n > 1 ? (CL.W - 84) / (n - 1) : 0; /* leave room for the altitude ruler */
+  const maxChars = Math.max(3, Math.floor((n > 1 ? spacing : 200) / 8) - 1);
+  const stars = S.teams.map((_, i) => {
+    const name = teamName(i);
+    return { x: Math.round(n > 1 ? 32 + i * spacing : (CL.W - 20) / 2), color: TEAM_COLORS[i], label: name.length > maxChars ? name.slice(0, maxChars - 1) + "." : name,
+      from: before[i], to: after[i], alt: altFor(before[i]), shown: before[i], moving: false };
+  });
+  const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const HOLD = 700, RISE = 3200;
+  const announced = new Set();
+  const queue = []; let banner = null, bannerUntil = 0;
+  const clampCam = c => Math.max(0, Math.min(CL.TOP - CL.H, c));
+  /* follow the leader, and keep everyone in view when they fit */
+  const leaderCam = () => {
+    const hi = Math.max(...stars.map(s => s.alt)), lo = Math.min(...stars.map(s => s.alt));
+    let c = hi - CL.H * 0.62;
+    if (lo - c < 24) c = Math.max(lo - 24, hi - CL.H * 0.82);
+    return clampCam(c);
+  };
+  const lowCam = () => clampCam(Math.min(...stars.map(s => s.alt)) - 30);
+  let doneAt = null;
+  const PAN = 2600;
+  const camTarget = now => {
+    const lead = leaderCam(), low = lowCam();
+    if (doneAt === null || lead - low < 20) return lead;
+    /* after the rise: pan down to the lowest team, pause, and come back up */
+    const t = now - doneAt - 900;
+    if (t < 0) return lead;
+    if (t < PAN) return lead + (low - lead) * ease(t / PAN);
+    if (t < PAN + 1200) return low;
+    if (t < PAN * 2 + 1200) return low + (lead - low) * ease((t - PAN - 1200) / PAN);
+    return lead;
+  };
+  let cam = leaderCam();
+  const t0 = performance.now();
+  let played = false;
+  const ease = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  const frame = now => {
+    const p = reduce ? 1 : Math.max(0, Math.min(1, (now - t0 - HOLD) / RISE));
+    if (!played && p > 0 && after.some((v, i) => v > before[i])) {
+      played = true;
+      [523, 659, 784, 1047].forEach((f, k) => setTimeout(() => beep(f, 0.12), k * 110));
+    }
+    stars.forEach((st, i) => {
+      const prevAlt = st.alt;
+      const pts = st.from + (st.to - st.from) * ease(p);
+      st.alt = altFor(pts); st.shown = pts; st.moving = p > 0 && p < 1 && st.to > st.from;
+      MILESTONES.forEach(([m, label]) => {
+        const key = i + "@" + m;
+        if (!announced.has(key) && altFor(st.from) < m && st.alt >= m && prevAlt <= st.alt) {
+          announced.add(key); queue.push(`${teamName(i).slice(0, 12)} reached ${label}!`);
+        }
+      });
+    });
+    if (now > bannerUntil) { banner = queue.shift() || null; if (banner) { bannerUntil = now + 1500; beep(880, 0.08); } }
+    if (p >= 1 && doneAt === null) doneAt = now;
+    cam += (camTarget(now) - cam) * (reduce ? 1 : doneAt !== null ? 0.2 : 0.08);
+    drawClimb(ctx, cam, now, stars, banner);
+    climbRaf = requestAnimationFrame(frame);
+  };
+  const go = () => { climbRaf = requestAnimationFrame(frame); };
+  if (document.fonts && document.fonts.load) document.fonts.load('8px "Press Start 2P"').then(go, go); else go();
+}
+
+function renderClimb() {
+  const last = S.round >= S.order.length - 1;
+  const t = totals();
+  const sp = sunPoints();
+  app.innerHTML = `<section class="climb-wrap">
+    <div class="panel climb-panel">
+      <div class="row-between">
+        <div><span class="eyebrow">After round ${S.round + 1} of ${S.order.length}</span><h2 style="margin:8px 0 0">The Ascent</h2></div>
+        <button class="btn small ghost" type="button" id="replay">Replay</button>
+      </div>
+      <canvas id="climb" width="${CL.W}" height="${CL.H}" role="img"
+        aria-label="Standings: ${esc(S.teams.map((_, i) => `${teamName(i)} ${t[i]} points`).join(", "))}"></canvas>    </div>
+    <div class="nav-foot"><button class="btn primary big" type="button" id="cont">${last ? "See final scores" : "Next round"}</button></div>
+  </section>`;
+  const canvas = document.getElementById("climb");
+  startClimb(canvas);
+  document.getElementById("replay").addEventListener("click", () => startClimb(canvas));
+  document.getElementById("cont").addEventListener("click", () => {
+    stopClimb();
+    S.drafts = {};
+    if (last) S.phase = "final";
+    else { S.round++; S.phase = "round"; resetTimer(); }
+    render();
+    window.scrollTo({ top: 0 });
+  });
+}
+
+function renderFinal() {
+  const t = totals();
+  const ranked = S.teams.map((_, i) => i).sort((a, b) => t[b] - t[a]);
+  let best = null;
+  S.history.forEach(r => { if (!r) return; r.entries.forEach((e, i) => {
+    const lvl = e.override === "no" ? 0 : (e.d && !e.miss) ? e.t : e.override === "yes" ? (e.ot || 1) : 0;
+    if (lvl && (!best || lvl > best.e.t)) best = { e: { d: e.d && !e.miss ? e.d : e.text, t: lvl, r: e.d && !e.miss ? e.r : "Counted by the leader" }, i, cat: CAT[r.cat] };
+  }); });
+  let rank = 0, prev = null;
+  app.innerHTML = `<section class="final">
+    <div class="panel">
+      <span class="eyebrow">Final scores</span>
+      <h2 class="win">${t[ranked[0]] > 0 ? esc(teamName(ranked[0])) + " wins" : "Game over"}</h2>
+      <div class="podium">
+        ${ranked.map((i, pos) => { if (t[i] !== prev) { rank = pos + 1; prev = t[i]; } return `<div class="pod ${rank === 1 ? "first" : ""}" style="--team:${TEAM_COLORS[i]}"><span class="rank">${rank}</span><span class="nm">${esc(teamName(i))}</span><span class="sc">${t[i]}</span></div>`; }).join("")}
+      </div>
+    </div>
+    <div class="panel best">
+      <span class="eyebrow">Rarest answer of the game</span>
+      ${best ? `<div class="big">${esc(best.e.d)}</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><span class="chip tier-${best.e.t}">${TIERS[best.e.t].name}</span><span class="ref">${esc(best.e.r)}</span></div>
+        <p class="note-txt" style="margin:0">${esc(teamName(best.i))}, for “${esc(best.cat.prompt)}”</p>` : `<p class="note-txt">No valid answers this game.</p>`}
+      <p class="note-txt" style="margin:8px 0 0">${S.history.filter(Boolean).length} rounds played.</p>
+      <div class="actions" style="margin-top:12px">
+        <button class="btn primary" type="button" id="again">Play again with these teams</button>
+        <button class="btn" type="button" id="setup">Change setup</button>
+      </div>
+    </div>
+  </section>`;
+  document.getElementById("again").addEventListener("click", () => { if (!S.picked.length) S.picked = STUDY_IDS.slice(); startGame(); });
+  document.getElementById("setup").addEventListener("click", () => { const k = { teams: S.teams, timer: S.timer, picked: S.picked }; S = Object.assign(fresh(), k); render(); });
+}
+
+/* End game (two-step, since confirm() is unavailable) */
+endBtn.addEventListener("click", () => {
+  if (endBtn.dataset.armed) {
+    stopTimer();
+    S.history = S.history.filter(Boolean);
+    S.phase = S.history.length ? "final" : "setup";
+    render();
+    return;
+  }
+  endBtn.dataset.armed = "1"; endBtn.textContent = "Click again to end";
+  setTimeout(() => { if (endBtn.dataset.armed) { endBtn.dataset.armed = ""; endBtn.textContent = "End game"; } }, 3000);
+});
+
+/* Answer key */
+const dlg = document.getElementById("key-dlg");
+document.getElementById("btn-key").addEventListener("click", () => {
+  document.getElementById("key-body").innerHTML = GROUPS.map(g => `<h3 class="key-section">${esc(g.title)}</h3>` +
+    CATS.filter(c => c.group === g.id).map(c => `<details class="key">
+    <summary>${esc(c.title)} <span class="diff">${c.diff} · ${c.a.length} answers</span></summary>
+    <p class="note-txt" style="margin:8px 0 0">“${esc(c.prompt)}” · ${esc(c.note)}</p>
+    ${[1, 2, 3, 4, 5].map(t => { const items = c.a.filter(a => a.t === t); return items.length ? `<div class="key-tier"><span class="chip tier-${t}">${TIERS[t].name} · ${TIERS[t].pts}</span></div>
+      <div class="key-items">${items.map(a => `<div>${esc(a.d)} <span class="ref">${esc(a.r)}</span>${a.why ? `<span class="alt" style="color:var(--ink)">${esc(a.why)}</span>` : ""}${a.al ? `<span class="alt">Also accepts: ${esc(a.al.split(";").join(", "))}</span>` : ""}</div>`).join("")}</div>` : ""; }).join("")}
+    ${c.n.length ? `<div class="key-miss"><b>Close but not counted:</b> ${c.n.map(m => `${esc(m.d)} (${esc(m.note)})`).join(" · ")}</div>` : ""}
+  </details>`).join("")).join("");
+  dlg.showModal();
+});
+document.getElementById("key-close").addEventListener("click", () => dlg.close());
+dlg.addEventListener("click", e => { if (e.target === dlg) dlg.close(); });
+
+if (S.phase === "round") resetTimer();
+render();
+</script>
+</body>
+</html>

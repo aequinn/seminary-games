@@ -250,6 +250,28 @@ details.key summary { cursor: pointer; font-size: 1.4rem; display: flex; gap: 10
 .key-miss { margin-top: 12px; font-size: 1.1rem; color: var(--muted); }
 .key-miss b { color: var(--ink); font-weight: 400; }
 
+/* Phones */
+.live { margin: 0 0 24px; padding: 0 0 22px; border-bottom: 3px dashed var(--ink); display: flex; flex-direction: column; gap: 12px; }
+.live-on { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 16px; align-items: center; }
+.qr { display: block; width: 100%; aspect-ratio: 1; image-rendering: pixelated; border: 4px solid var(--ink); background: #fff; }
+.join-code { font-family: var(--pixel); font-size: 1.4rem; letter-spacing: .15em; color: var(--pink); text-shadow: 2px 2px 0 var(--ink); }
+.join-url { font-size: 1.15rem; overflow-wrap: anywhere; }
+.live-stat { font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
+.dot { width: 12px; height: 12px; border: 2px solid var(--ink); background: #CFC6E6; flex: none; }
+.dot.on { background: var(--green); }
+.dot.warn { background: var(--orange); }
+.phone { font-family: var(--pixel); font-size: 0.42rem; text-transform: uppercase; border: 2px solid var(--ink); background: #fff; padding: 4px 5px; display: inline-flex; gap: 5px; align-items: center; flex: none; white-space: nowrap; }
+.phone .dot { width: 8px; height: 8px; border-width: 1px; }
+.phone.got { background: var(--green); }
+.entry label .phone { margin-left: auto; }
+.live-warn { font-size: 1.1rem; background: var(--yellow); border: 3px solid var(--ink); padding: 6px 10px; }
+.join-dlg { width: min(760px, calc(100vw - 32px)); }
+.join-big { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; align-items: center; padding-top: 16px; }
+.join-big .qr { max-width: 340px; margin: 0 auto; }
+.join-big .join-code { font-size: clamp(1.6rem, 5vw, 2.6rem); }
+.join-big ol { margin: 0; padding-left: 1.2em; font-size: 1.4rem; display: flex; flex-direction: column; gap: 8px; }
+@media (max-width: 560px) { .live-on, .join-big { grid-template-columns: minmax(0, 1fr); } .live-on .qr { max-width: 200px; } }
+
 @keyframes pop { 0% { opacity: 0; transform: translateY(16px) scale(.9); } 100% { opacity: 1; transform: none; } }
 @keyframes blink { 50% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
@@ -281,6 +303,7 @@ details.key summary { cursor: pointer; font-size: 1.4rem; display: flex; gap: 10
       <span class="eyebrow">Old Testament edition</span>
     </div>
     <div class="actions">
+      <button class="btn ghost" id="btn-join" type="button" hidden>Join code</button>
       <button class="btn ghost" id="btn-key" type="button">Answer key</button>
       <button class="btn ghost" id="btn-end" type="button" hidden>End game</button>
     </div>
@@ -294,6 +317,14 @@ details.key summary { cursor: pointer; font-size: 1.4rem; display: flex; gap: 10
     <button class="btn small" type="button" id="key-close">Close</button>
   </div>
   <div class="dlg-body" id="key-body"></div>
+</dialog>
+
+<dialog id="join-dlg" class="join-dlg" aria-labelledby="join-title">
+  <div class="dlg-head">
+    <h2 id="join-title">Join on your phone</h2>
+    <button class="btn small" type="button" id="join-close">Close</button>
+  </div>
+  <div class="dlg-body" id="join-body"></div>
 </dialog>
 
 <script>
@@ -1239,13 +1270,14 @@ function matchAnswer(cat, input) {
 const TEAM_COLORS = ["#FF3D9A", "#FFD23F", "#3FA9FF", "#5FD43A", "#FF8A3D", "#A66BFF", "#2EE6D6", "#FF4B4B"];
 const KEY = "one-in-a-millennium-v1";
 const STUDY_IDS = CATS.filter(c => c.group === "study" || c.group === "dm").map(c => c.id);
-function fresh(teams) {
-  return { phase: "setup", teams: teams || ["Team 1", "Team 2", "Team 3"], timer: 60, picked: STUDY_IDS.slice(), order: [], round: 0, history: [], drafts: {} };
+/* links[i] is the id of the phone that plays for team i, or null when the leader types that team's answers */
+function fresh(teams, links) {
+  return { phase: "setup", teams: teams || ["Team 1", "Team 2", "Team 3"], links: links || [], timer: 60, picked: STUDY_IDS.slice(), order: [], round: 0, history: [], drafts: {} };
 }
 function load() {
   try {
     const s = JSON.parse(localStorage.getItem(KEY));
-    if (s && s.phase && Array.isArray(s.teams)) { s.picked = (s.picked || []).filter(id => CAT[id]); s.order = (s.order || []).filter(id => CAT[id]); return s; }
+    if (s && s.phase && Array.isArray(s.teams)) { s.picked = (s.picked || []).filter(id => CAT[id]); s.order = (s.order || []).filter(id => CAT[id]); s.links = Array.isArray(s.links) ? s.links : []; return s; }
   } catch (e) {}
   return null;
 }
@@ -1259,7 +1291,7 @@ if (DEMO) {
     history: [0, 1, 2, 3].map(r => ({ cat: STUDY_IDS[r], entries: levels.map(l => ({ text: "demo", d: null, override: "yes", ot: l[r] })) }))
   });
 }
-if (S.phase !== "setup" && !S.order.length) S = fresh(S.teams);
+if (S.phase !== "setup" && !S.order.length) S = fresh(S.teams, S.links);
 let anim = false;
 const T = { left: 0, running: false, iv: null, done: false };
 
@@ -1286,6 +1318,9 @@ const app = document.getElementById("app");
 const endBtn = document.getElementById("btn-end");
 
 function render() {
+  /* Keep the cursor where it was when a redraw comes from outside (a phone joining) */
+  const fx = document.activeElement && document.activeElement.id && app.contains(document.activeElement)
+    ? { id: document.activeElement.id, a: document.activeElement.selectionStart, b: document.activeElement.selectionEnd } : null;
   stopClimb();
   endBtn.hidden = S.phase === "setup";
   endBtn.textContent = "End game";
@@ -1296,6 +1331,9 @@ function render() {
   else if (S.phase === "climb") renderClimb();
   else renderFinal();
   save();
+  LIVE.publish();
+  const el = fx && document.getElementById(fx.id);
+  if (el && el !== document.activeElement) { el.focus({ preventScroll: true }); try { if (fx.a != null) el.setSelectionRange(fx.a, fx.b); } catch (e) {} }
 }
 
 /* ---------- Pixel art ---------- */
@@ -1352,12 +1390,14 @@ function renderSetup() {
     </div>
 
     <div class="panel">
+      ${LIVE.setupHTML()}
       <h2>Teams</h2>
-      <p class="sub">Up to eight teams. Use first names or team names only.</p>
+      <p class="sub">Up to eight teams. Use first names or team names only.${LIVE.on() ? " Phones that join take an unused “Team” slot, or add a new team." : ""}</p>
       <div class="team-list" id="team-list">
         ${S.teams.map((t, i) => `<div class="team-row">
           <span class="swatch" style="background:${TEAM_COLORS[i]}"></span>
           <input class="field" id="team-${i}" data-team="${i}" value="${esc(t)}" maxlength="24" aria-label="Team ${i + 1} name">
+          ${LIVE.badgeHTML(i)}
           <button class="icon-btn" type="button" data-remove="${i}" aria-label="Remove ${esc(teamName(i))}" ${S.teams.length <= 1 ? "disabled" : ""}>×</button>
         </div>`).join("")}
       </div>
@@ -1399,9 +1439,15 @@ function renderSetup() {
     </div>
   </section>`;
 
-  app.querySelectorAll("[data-team]").forEach(inp => inp.addEventListener("input", () => { S.teams[+inp.dataset.team] = inp.value; save(); }));
-  app.querySelectorAll("[data-remove]").forEach(b => b.addEventListener("click", () => { S.teams.splice(+b.dataset.remove, 1); render(); }));
+  app.querySelectorAll("[data-team]").forEach(inp => inp.addEventListener("input", () => { S.teams[+inp.dataset.team] = inp.value; save(); LIVE.publishSoon(); }));
+  app.querySelectorAll("[data-remove]").forEach(b => b.addEventListener("click", () => {
+    const i = +b.dataset.remove;
+    LIVE.kick(S.links[i], "The leader removed your team. You can join again with a new name.");
+    S.teams.splice(i, 1); S.links.splice(i, 1);
+    render();
+  }));
   document.getElementById("add-team").addEventListener("click", () => { S.teams.push(`Team ${S.teams.length + 1}`); render(); document.getElementById(`team-${S.teams.length - 1}`)?.select(); });
+  LIVE.bindSetup();
   app.querySelectorAll("[data-timer]").forEach(b => b.addEventListener("click", () => { S.timer = +b.dataset.timer; render(); }));
   app.querySelectorAll("[data-cat]").forEach(cb => cb.addEventListener("change", () => {
     const id = cb.dataset.cat;
@@ -1421,6 +1467,7 @@ function startGame() {
   S.teams = S.teams.map((t, i) => t.trim() || `Team ${i + 1}`);
   S.order = shuffle(S.picked);
   S.round = 0; S.history = []; S.drafts = {};
+  S.gameId = Date.now().toString(36); /* tags phone answers so a late answer can't land in a new game */
   S.phase = "round";
   resetTimer();
   render();
@@ -1477,12 +1524,12 @@ function renderRound() {
       ${promptHTML(cat, true)}
       <div class="panel">
         <div class="row-between">
-          <div><h2>Team answers</h2><p class="sub" style="margin:0">When time's up, type each team's answer. Typing is hidden so the room can't see it.</p></div>
+          <div><h2>Team answers</h2><p class="sub" style="margin:0">${LIVE.linkedCount() ? "Teams with a phone send their own answer. Type the rest when time's up." : "When time's up, type each team's answer."} Answers are hidden so the room can't see them.</p></div>
           <button class="btn small ghost" type="button" id="peek" aria-pressed="false">Show typing</button>
         </div>
         <div class="entry-list" style="margin-top:16px">
           ${S.teams.map((_, i) => `<div class="entry">
-            <label for="ans-${i}"><span class="swatch" style="background:${TEAM_COLORS[i]}"></span>${esc(teamName(i))}</label>
+            <label for="ans-${i}"><span class="swatch" style="background:${TEAM_COLORS[i]}"></span>${esc(teamName(i))}<span id="ph-${i}">${LIVE.answerTagHTML(i)}</span></label>
             <input class="field ans masked" id="ans-${i}" data-ans="${i}" value="${esc(S.drafts[i] || "")}" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Answer">
           </div>`).join("")}
         </div>
@@ -1514,8 +1561,8 @@ function renderRound() {
   });
   if (S.timer) {
     document.getElementById("t-go").addEventListener("click", toggleTimer);
-    document.getElementById("t-add").addEventListener("click", () => { T.left += 15; T.done = false; paintTimer(); });
-    document.getElementById("t-reset").addEventListener("click", () => { stopTimer(); resetTimer(); paintTimer(); });
+    document.getElementById("t-add").addEventListener("click", () => { T.left += 15; T.done = false; paintTimer(); LIVE.publish(); });
+    document.getElementById("t-reset").addEventListener("click", () => { stopTimer(); resetTimer(); paintTimer(); LIVE.publish(); });
     paintTimer();
   }
 }
@@ -1542,11 +1589,12 @@ function toggleTimer() {
     T.iv = setInterval(() => {
       T.left = Math.max(0, T.left - 1);
       if (T.left > 0 && T.left <= 5) beep(700, 0.12);
-      if (T.left === 0) { stopTimer(); T.done = true; beep(440, 0.9); }
+      if (T.left === 0) { stopTimer(); T.done = true; beep(440, 0.9); LIVE.publish(); }
       paintTimer();
     }, 1000);
   }
   paintTimer();
+  LIVE.publish();
 }
 function paintTimer() {
   const ring = document.getElementById("ring");
@@ -2007,7 +2055,7 @@ function renderFinal() {
     </div>
   </section>`;
   document.getElementById("again").addEventListener("click", () => { if (!S.picked.length) S.picked = STUDY_IDS.slice(); startGame(); });
-  document.getElementById("setup").addEventListener("click", () => { const k = { teams: S.teams, timer: S.timer, picked: S.picked }; S = Object.assign(fresh(), k); render(); });
+  document.getElementById("setup").addEventListener("click", () => { const k = { teams: S.teams, links: S.links, timer: S.timer, picked: S.picked }; S = Object.assign(fresh(), k); render(); });
 }
 
 /* End game (two-step, since confirm() is unavailable) */
@@ -2038,6 +2086,313 @@ document.getElementById("btn-key").addEventListener("click", () => {
 });
 document.getElementById("key-close").addEventListener("click", () => dlg.close());
 dlg.addEventListener("click", e => { if (e.target === dlg) dlg.close(); });
+
+/* ---------- Phones ----------
+   Optional. The leader opens a room (POST /api/rooms), shows its QR code, and each team's
+   representative joins at /join/ on a phone. This screen stays in charge of the game: it gives each
+   phone a team, and tells phones what to show through "view" messages. Phone answers go straight
+   into the team's answer box, where the leader can still change them before revealing.
+   Needs the site's server (worker/index.ts); opened as a plain file the game still works without it. */
+const LIVE = (() => {
+  const LKEY = "one-in-a-millennium-live";
+  let room = null;           /* { code, key } */
+  try { room = JSON.parse(localStorage.getItem(LKEY)); } catch (e) {}
+  if (!room || !room.code || !room.key) room = null;
+  let ws = null, status = "off", retry = 0, retryT = null, pingT = null, soonT = null, error = "";
+  const players = {};        /* pid -> { name, online } */
+  const answers = {};        /* pid -> { round, text } */
+  const saveRoom = () => { try { room ? localStorage.setItem(LKEY, JSON.stringify(room)) : localStorage.removeItem(LKEY); } catch (e) {} };
+  const send = m => { if (ws && ws.readyState === 1) { ws.send(JSON.stringify(m)); return true; } return false; };
+  const joinURL = () => room ? `${location.origin}/join/?code=${room.code}` : "";
+  const qrSrc = () => `/api/qr?text=${encodeURIComponent(joinURL())}`;
+  const localOnly = () => /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+  const roundKey = () => `${S.gameId || "g"}:${S.round}:${S.order[S.round] || ""}`;
+  const teamOf = pid => pid ? S.links.indexOf(pid) : -1;
+  const isDefaultName = i => /^team \d+$/i.test((S.teams[i] || "").trim()) || !(S.teams[i] || "").trim();
+
+  async function openRoom() {
+    error = ""; status = "connecting"; refreshUI();
+    try {
+      const r = await fetch("/api/rooms", { method: "POST" });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const j = await r.json();
+      room = { code: j.code, key: j.hostKey }; saveRoom();
+      connect();
+    } catch (e) {
+      status = "off";
+      error = location.protocol === "file:"
+        ? "Phone joining needs the game opened from the website, not as a file."
+        : "Couldn't reach the game server. Check the internet connection and try again.";
+      refreshUI();
+    }
+  }
+  function closeRoom() {
+    send({ t: "close" });
+    clearTimeout(retryT); clearInterval(pingT);
+    if (ws) { ws.onclose = null; ws.close(); }
+    ws = null; room = null; status = "off"; saveRoom();
+    S.links = S.teams.map(() => null);
+    for (const k in players) delete players[k];
+    for (const k in answers) delete answers[k];
+    render();
+  }
+  function connect() {
+    if (!room) return;
+    clearTimeout(retryT);
+    status = retry ? "reconnecting" : "connecting";
+    const url = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/api/rooms/${room.code}/ws?role=host&key=${encodeURIComponent(room.key)}`;
+    try { ws = new WebSocket(url); } catch (e) { return scheduleRetry(); }
+    let opened = false;
+    ws.onopen = () => {
+      opened = true; retry = 0; status = "on"; error = "";
+      clearInterval(pingT); pingT = setInterval(() => send({ t: "ping" }), 25000);
+      publish(); refreshUI();
+    };
+    ws.onmessage = ev => { let m; try { m = JSON.parse(ev.data); } catch (e) { return; } onMessage(m); };
+    ws.onclose = ev => {
+      clearInterval(pingT);
+      if (ev.code === 4001) { status = "off"; error = "Phones moved to another screen that opened this game."; ws = null; refreshUI(); return; }
+      if (ev.code === 4000) { room = null; saveRoom(); status = "off"; S.links = S.teams.map(() => null); render(); return; }
+      if (!opened) return checkGone();
+      scheduleRetry();
+    };
+  }
+  async function checkGone() {
+    /* Rooms close themselves after a day. If ours is gone, forget it instead of retrying forever. */
+    try {
+      const r = await fetch(`/api/rooms/${room.code}`);
+      if (r.ok && !(await r.json()).exists) { room = null; saveRoom(); status = "off"; S.links = S.teams.map(() => null); render(); return; }
+    } catch (e) {}
+    scheduleRetry();
+  }
+  function scheduleRetry() {
+    retry++; status = "reconnecting"; refreshUI();
+    retryT = setTimeout(connect, Math.min(10000, 500 * 2 ** Math.min(retry, 5)));
+  }
+
+  function onMessage(m) {
+    if (m.t === "hello") {
+      for (const p of m.players || []) players[p.pid] = { name: p.name, online: p.online };
+      /* Forget links to phones this room has never seen (for example after opening a new room) */
+      let changed = false;
+      S.links = S.teams.map((_, i) => { const pid = S.links[i]; if (pid && !players[pid]) { changed = true; return null; } return pid || null; });
+      Object.assign(answers, m.answers || {});
+      for (const p of m.players || []) if (teamOf(p.pid) < 0) assign(p.pid, p.name);
+      for (const [pid, a] of Object.entries(m.answers || {})) take(pid, a, true);
+      if (changed) render(); else { save(); publish(); refreshUI(); }
+    } else if (m.t === "join") {
+      players[m.pid] = { name: m.name, online: true };
+      assign(m.pid, m.name);
+    } else if (m.t === "presence") {
+      if (players[m.pid]) players[m.pid].online = m.online;
+      refreshUI();
+    } else if (m.t === "answer") {
+      answers[m.pid] = { round: m.round, text: m.text };
+      take(m.pid, m, false);
+    }
+  }
+
+  /* Give a phone a team: its old team, else an unused "Team N" slot, else a new team */
+  function assign(pid, name) {
+    let i = teamOf(pid);
+    const inSetup = S.phase === "setup";
+    if (i >= 0) {
+      if (inSetup && name && S.teams[i] !== name) { S.teams[i] = name; render(); } else publish();
+      return;
+    }
+    if (inSetup) {
+      i = S.teams.findIndex((_, k) => !S.links[k] && isDefaultName(k));
+      if (i < 0 && S.teams.length < 8) { S.teams.push(name); i = S.teams.length - 1; }
+    } else {
+      /* Mid-game, a phone can only take over a team with the same name and no phone (a new phone, or a dead battery) */
+      i = S.teams.findIndex((t, k) => !S.links[k] && t.trim().toLowerCase() === name.trim().toLowerCase());
+    }
+    if (i < 0) {
+      send({ t: "reject", pid, reason: inSetup ? "The game already has eight teams." : "The game has already started. To rejoin, use your team's exact name, or ask your leader." });
+      delete players[pid];
+      return;
+    }
+    S.links[i] = pid;
+    if (inSetup) S.teams[i] = name;
+    render();
+  }
+
+  function take(pid, a, quiet) {
+    const i = teamOf(pid);
+    if (i < 0 || S.phase !== "round" || a.round !== roundKey()) return;
+    if (quiet && (S.drafts[i] || "").trim()) return; /* on reconnect, don't undo the leader's own typing */
+    S.drafts[i] = a.text;
+    save();
+    const inp = document.getElementById(`ans-${i}`);
+    if (inp && inp.value !== a.text) inp.value = a.text;
+    const tag = document.getElementById(`ph-${i}`);
+    if (tag) tag.innerHTML = answerTagHTML(i);
+    if (!quiet) publish();
+  }
+
+  function kick(pid, reason) {
+    if (!pid) return;
+    send({ t: "kick", pid, reason });
+    delete players[pid]; delete answers[pid];
+  }
+
+  /* What phones should show right now */
+  function view() {
+    const t = totals();
+    const teams = S.teams.map((_, i) => ({ name: teamName(i), color: TEAM_COLORS[i] }));
+    const standings = S.teams.map((_, i) => ({ team: i, name: teamName(i), color: TEAM_COLORS[i], score: t[i] })).sort((a, b) => b.score - a.score);
+    const cat = CAT[S.order[S.round]];
+    const base = { round: S.round + 1, total: S.order.length, key: roundKey() };
+    let common;
+    if (S.phase === "setup") common = { phase: "lobby", teams };
+    else if (S.phase === "round") common = { ...base, phase: "round", prompt: cat.prompt, note: cat.note, diff: cat.diff, timer: S.timer ? { len: S.timer, left: T.left, running: T.running } : { len: 0 } };
+    else if (S.phase === "reveal") common = { ...base, phase: "reveal", prompt: cat.prompt };
+    else if (S.phase === "climb") common = { ...base, phase: "scores", standings };
+    else common = { phase: "final", standings };
+    const per = {};
+    const r = S.phase === "reveal" ? S.history[S.round] : null;
+    const pts = r ? roundPoints(r) : [];
+    S.links.forEach((pid, i) => {
+      if (!pid || i >= S.teams.length) return;
+      const mine = { team: i, name: teamName(i), color: TEAM_COLORS[i], score: t[i] };
+      if (S.phase === "round") { mine.answer = (S.drafts[i] || "").trim(); mine.round = roundKey(); }
+      if (r && r.entries[i]) mine.result = resultFor(r.entries[i], pts[i]);
+      per[pid] = mine;
+    });
+    return { common, per };
+  }
+  function resultFor(e, pts) {
+    const valid = e.d && !e.miss && e.override !== "no";
+    let label, tier = 0, detail = "";
+    if (!e.text) label = "No answer";
+    else if (valid) { tier = e.t; label = TIERS[e.t].name; detail = [norm(e.text) === norm(e.d) ? "" : `Counted as ${e.d}`, e.r].filter(Boolean).join(" · "); }
+    else if (e.override === "no") { label = "Not counted"; detail = "The leader ruled this out."; }
+    else if (e.override === "yes") { tier = e.ot || 1; label = TIERS[tier].name; detail = "Counted by the leader."; }
+    else if (e.miss) { label = "Close, but no"; detail = e.note || ""; }
+    else { label = "Not on the list"; detail = "The leader may still count it."; }
+    return { text: e.text, label, tier, detail, pts };
+  }
+  function publish() {
+    clearTimeout(soonT);
+    headBtn.hidden = !room;
+    if (room) headBtn.textContent = `Join: ${room.code}`;
+    if (status !== "on") return;
+    send({ t: "view", ...view() });
+  }
+  function publishSoon() { clearTimeout(soonT); soonT = setTimeout(publish, 250); }
+
+  /* ---------- On-screen bits ---------- */
+  function statusHTML() {
+    const n = S.links.filter(Boolean).length;
+    const online = S.links.filter(p => p && players[p] && players[p].online).length;
+    if (status === "on") return `<span class="live-stat"><span class="dot on"></span>Open · ${n ? `${online} of ${n} team phone${n === 1 ? "" : "s"} connected` : "No phones yet"}</span>`;
+    if (status === "connecting") return `<span class="live-stat"><span class="dot warn"></span>Opening…</span>`;
+    return `<span class="live-stat"><span class="dot warn"></span>Reconnecting to the game server…</span>`;
+  }
+  function setupHTML() {
+    if (!room) return `<div class="live" id="live-box">
+      <h2>Phones</h2>
+      <p class="sub" style="margin:0">Let one person on each team join from their phone with a QR code. They pick the team name and send the team's answers.</p>
+      ${error ? `<div class="live-warn">${esc(error)}</div>` : ""}
+      <div><button class="btn primary small" type="button" id="live-open" ${status === "connecting" ? "disabled" : ""}>Let teams join by phone</button></div>
+    </div>`;
+    return `<div class="live" id="live-box">
+      <div class="row-between"><h2 style="margin:0">Phones</h2><span id="live-stat">${statusHTML()}</span></div>
+      <div class="live-on">
+        <img class="qr" src="${esc(qrSrc())}" alt="QR code to join game ${esc(room.code)}" width="150" height="150">
+        <div style="display:flex;flex-direction:column;gap:8px;min-width:0">
+          <span class="eyebrow">Game code</span>
+          <span class="join-code">${esc(room.code)}</span>
+          <span class="join-url">${esc(joinURL().replace(/^https?:\/\//, ""))}</span>
+          <div class="actions">
+            <button class="btn small" type="button" id="live-big">Show on the big screen</button>
+            <button class="btn small ghost" type="button" id="live-stop">${stopArmed ? "Click again to stop" : "Stop phones"}</button>
+          </div>
+        </div>
+      </div>
+      ${localOnly() ? `<div class="live-warn">Phones can't open “localhost”. Open this page using this computer's network address instead (run <b>npm run dev:lan</b>), or use the published site.</div>` : ""}
+      ${error ? `<div class="live-warn">${esc(error)}</div>` : ""}
+    </div>`;
+  }
+  let stopArmed = false;
+  function bindSetup() {
+    const o = document.getElementById("live-open");
+    if (o) o.addEventListener("click", openRoom);
+    const b = document.getElementById("live-big");
+    if (b) b.addEventListener("click", showDialog);
+    const s = document.getElementById("live-stop");
+    if (s) s.addEventListener("click", () => {
+      if (stopArmed) { stopArmed = false; closeRoom(); return; }
+      stopArmed = true; s.textContent = "Click again to stop";
+      setTimeout(() => { stopArmed = false; if (s.isConnected) s.textContent = "Stop phones"; }, 3000);
+    });
+  }
+  function badgeHTML(i) {
+    const pid = S.links[i];
+    if (!pid) return "";
+    const on = players[pid] && players[pid].online;
+    return `<span class="phone" title="${on ? "Phone connected" : "Phone not connected"}"><span class="dot ${on ? "on" : ""}"></span>Phone</span>`;
+  }
+  function answerTagHTML(i) {
+    const pid = S.links[i];
+    if (!pid) return "";
+    const a = answers[pid];
+    const got = a && a.round === roundKey() && (S.drafts[i] || "").trim();
+    const on = players[pid] && players[pid].online;
+    return `<span class="phone ${got ? "got" : ""}">${got ? "Sent" : `<span class="dot ${on ? "on" : ""}"></span>Phone`}</span>`;
+  }
+  const dlg = document.getElementById("join-dlg");
+  function showDialog() {
+    if (!room) return;
+    document.getElementById("join-body").innerHTML = `<div class="join-big">
+      <img class="qr" src="${esc(qrSrc())}" alt="QR code to join game ${esc(room.code)}">
+      <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+        <ol>
+          <li>One person per team scans the code with their phone camera.</li>
+          <li>Type your team's name.</li>
+          <li>Questions show up on your phone. Send one answer per round.</li>
+        </ol>
+        <span class="eyebrow">Or go to</span>
+        <span class="join-url" style="font-size:1.4rem">${esc(location.host)}/join</span>
+        <span class="eyebrow">and enter</span>
+        <span class="join-code">${esc(room.code)}</span>
+      </div>
+    </div>`;
+    dlg.showModal();
+  }
+  document.getElementById("join-close").addEventListener("click", () => dlg.close());
+  dlg.addEventListener("click", e => { if (e.target === dlg) dlg.close(); });
+  const headBtn = document.getElementById("btn-join");
+  headBtn.addEventListener("click", showDialog);
+
+  /* Update the small status pieces without redrawing the screen (so typing isn't interrupted) */
+  function refreshUI() {
+    headBtn.hidden = !room;
+    if (room) headBtn.textContent = `Join: ${room.code}`;
+    if (S.phase === "setup") {
+      const box = document.getElementById("live-box");
+      const stat = document.getElementById("live-stat");
+      if (box && (!!room) !== !!stat) { render(); return; }
+      if (!room && box) { const o = document.getElementById("live-open"); if (o) o.disabled = status === "connecting"; }
+      if (stat) stat.innerHTML = statusHTML();
+      S.teams.forEach((_, i) => {
+        const row = document.getElementById(`team-${i}`);
+        const old = row && row.parentElement.querySelector(".phone");
+        const html = badgeHTML(i);
+        if (old) old.outerHTML = html || "<span hidden></span>";
+        else if (row && html) row.insertAdjacentHTML("afterend", html);
+      });
+    } else if (S.phase === "round") {
+      S.teams.forEach((_, i) => { const tag = document.getElementById(`ph-${i}`); if (tag) tag.innerHTML = answerTagHTML(i); });
+    }
+  }
+
+  if (room) setTimeout(connect, 0);
+  return {
+    on: () => !!room, publish, publishSoon, kick, setupHTML, bindSetup, badgeHTML, answerTagHTML,
+    linkedCount: () => S.links.filter(Boolean).length
+  };
+})();
 
 if (S.phase === "round") resetTimer();
 render();

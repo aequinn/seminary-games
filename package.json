@@ -1,0 +1,24 @@
+{
+  "name": "seminary-games",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "cf dev",
+    "dev:lan": "cf dev --host 0.0.0.0",
+    "build": "cf build",
+    "deploy": "cf deploy",
+    "types": "cf workers types",
+    "check": "tsc"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "2.0.0-rc.2",
+    "cf": "1.0.0-rc.2",
+    "qrcode-generator": "^2.0.4",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8"
+  },
+  "allowScripts": {
+    "workerd@1.20261117.1": true,
+    "workerd@1.20261118.1": true
+  }
+}

@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2FA8E8">
+<title>Join a Game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
+<style>
+/* Phone controller for a team representative. Same 8-bit look as the projector screen,
+   sized for one thumb: one big card, one big field, one big button. */
+:root {
+  --sky: #4FC3F7; --sky-deep: #2FA8E8; --ink: #1B1035; --paper: #FFFBEA; --paper-2: #FFF0B8; --muted: #5B4E7A;
+  --pink: #FF3D9A; --yellow: #FFD23F; --green: #5FD43A; --red: #FF4B4B; --orange: #FF8A3D;
+  --pixel: "Press Start 2P", "Courier New", monospace;
+  --body: "VT323", Consolas, "Courier New", monospace;
+  --team: var(--pink);
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; min-height: 100%; }
+body {
+  background: linear-gradient(180deg, var(--sky-deep) 0 90px, var(--sky) 90px 100%);
+  color: var(--ink); font-family: var(--body); font-size: 23px; line-height: 1.2;
+  padding: max(14px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+}
+button, input { font: inherit; color: inherit; }
+main { max-width: 520px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+h1 { font-family: var(--pixel); font-weight: 400; font-size: 0.85rem; line-height: 1.4; margin: 0; color: #fff; text-shadow: 2px 2px 0 var(--ink); }
+.code-tag { font-family: var(--pixel); font-size: 0.55rem; background: var(--yellow); border: 3px solid var(--ink); padding: 5px 7px; }
+.panel { background: var(--paper); border: 4px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+.panel.team { border-left: 14px solid var(--team); }
+.eyebrow { font-family: var(--pixel); font-size: 0.5rem; text-transform: uppercase; letter-spacing: .04em; color: var(--pink); }
+h2 { font-family: var(--pixel); font-weight: 400; font-size: 0.8rem; line-height: 1.6; margin: 0; text-wrap: balance; }
+h2.prompt { font-size: 0.95rem; }
+p { margin: 0; }
+.muted { color: var(--muted); }
+label { font-size: 1.2rem; display: block; margin-bottom: 6px; }
+.field { width: 100%; background: #fff; border: 3px solid var(--ink); border-radius: 0; padding: 10px 12px; font-family: var(--body); font-size: 1.7rem; color: var(--ink); }
+.field.code { font-family: var(--pixel); font-size: 1.2rem; letter-spacing: .3em; text-transform: uppercase; text-align: center; }
+.field::placeholder { color: #9A90B5; letter-spacing: normal; }
+.btn { font-family: var(--pixel); font-size: 0.7rem; text-transform: uppercase; line-height: 1.3; border: 3px solid var(--ink); border-radius: 0; background: #fff; color: var(--ink); padding: 16px 18px; cursor: pointer; box-shadow: 5px 5px 0 var(--ink); width: 100%; }
+.btn:active { transform: translate(5px, 5px); box-shadow: none; }
+.btn.primary { background: var(--pink); color: #fff; text-shadow: 2px 2px 0 var(--ink); }
+.btn.small { font-size: 0.5rem; padding: 9px 10px; box-shadow: 3px 3px 0 var(--ink); width: auto; }
+.btn[disabled] { opacity: .5; }
+.btn:focus-visible, .field:focus-visible { outline: 3px dashed var(--pink); outline-offset: 3px; }
+.row { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.swatch { width: 18px; height: 18px; border: 3px solid var(--ink); background: var(--team); display: inline-block; flex: none; vertical-align: -2px; }
+.who { font-size: 1.5rem; display: flex; gap: 10px; align-items: center; overflow-wrap: anywhere; }
+.status { font-size: 1.25rem; padding: 8px 10px; border: 3px solid var(--ink); background: #fff; }
+.status.ok { background: var(--green); }
+.status.warn { background: var(--yellow); }
+.status.bad { background: var(--red); color: #fff; }
+.timer { font-family: var(--pixel); font-size: 1.3rem; background: var(--ink); color: var(--yellow); padding: 8px 10px; min-width: 4.5ch; text-align: center; font-variant-numeric: tabular-nums; }
+.timer.low { color: var(--orange); }
+.timer.done { color: var(--red); }
+.sent { font-size: 1.3rem; overflow-wrap: anywhere; }
+.sent b { font-weight: 400; background: var(--paper-2); padding: 0 6px; border: 2px solid var(--ink); }
+.result { font-size: 2rem; overflow-wrap: anywhere; }
+.pts { font-family: var(--pixel); font-size: 1.6rem; color: var(--pink); text-shadow: 2px 2px 0 var(--ink); }
+.chip { font-family: var(--pixel); font-size: 0.5rem; text-transform: uppercase; border: 2px solid var(--ink); padding: 5px 7px; background: #fff; align-self: flex-start; }
+.chip.t1 { background: #fff; } .chip.t2 { background: #5FD43A; } .chip.t3 { background: #3FA9FF; } .chip.t4 { background: #B07CFF; } .chip.t5 { background: var(--yellow); }
+.chip.miss { background: var(--red); color: #fff; }
+.standings { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.standings li { display: grid; grid-template-columns: 2.4ch 18px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 10px; background: #fff; border: 3px solid var(--ink); }
+.standings li.me { background: var(--paper-2); box-shadow: 3px 3px 0 var(--ink); }
+.standings .rk, .standings .sc { font-family: var(--pixel); font-size: 0.65rem; }
+.standings .nm { overflow-wrap: anywhere; }
+.err { color: #B00030; font-size: 1.2rem; min-height: 1.2em; }
+@keyframes blink { 50% { opacity: .35; } }
+.waiting::after { content: "…"; animation: blink 1s steps(2) infinite; }
+@media (prefers-reduced-motion: reduce) { .waiting::after { animation: none; } .btn:active { transform: none; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Seminary Games</h1>
+    <span class="code-tag" id="code-tag" hidden></span>
+  </header>
+  <div id="conn" class="status warn" role="status" hidden></div>
+  <div id="app" aria-live="polite"></div>
+</main>
+
+<script>
+/* Messages from the room (see worker/index.ts):
+     view     { common, mine, joined, name }  what the projector is showing, plus this team's part
+     host     { online }                       the projector screen connected or dropped
+     removed  { reason }                       the leader removed this team
+     error    { message }
+   Messages to the room: join { name }, answer { round, text }. */
+const $ = id => document.getElementById(id);
+const app = $("app");
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} }
+};
+function newId() {
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(b, x => x.toString(16).padStart(2, "0")).join("");
+}
+let pid = store.get("sg-pid");
+if (!pid) { pid = newId(); store.set("sg-pid", pid); }
+
+const params = new URLSearchParams(location.search);
+let code = (params.get("code") || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+const st = { view: null, joined: false, name: "", hostOnline: true, removed: null, error: "", sentText: null, sentRound: null, draft: "", drafted: null };
+let ws = null, retry = 0, retryTimer = null, pingTimer = null, everOpen = false, closedForGood = false;
+let shownKey = ""; /* which screen is on the page, so typing isn't wiped by updates */
+
+/* ---------- Connection ---------- */
+function wsURL() { return `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/api/rooms/${code}/ws?role=player&pid=${pid}`; }
+function connect() {
+  clearTimeout(retryTimer);
+  ws = new WebSocket(wsURL());
+  ws.onopen = () => {
+    retry = 0; everOpen = true; showConn("");
+    clearInterval(pingTimer); pingTimer = setInterval(() => send({ t: "ping" }), 25000);
+    /* Rejoin after the room forgot us (or the first time, if a name was typed before connecting) */
+    const want = store.get(`sg-name-${code}`);
+    if (want && pendingJoin) { send({ t: "join", name: want }); pendingJoin = false; }
+  };
+  ws.onmessage = ev => { let m; try { m = JSON.parse(ev.data); } catch (e) { return; } onMessage(m); };
+  ws.onclose = ev => {
+    clearInterval(pingTimer);
+    if (ev.code === 4002) { closedForGood = true; showConn("This game is open in another tab on this phone."); return; }
+    if (ev.code === 4000) { closedForGood = true; st.view = null; showConn(""); renderEnded(); return; }
+    if (!everOpen && retry >= 2) { checkRoom(); return; }
+    retry++;
+    showConn("Reconnecting");
+    retryTimer = setTimeout(connect, Math.min(8000, 600 * 2 ** Math.min(retry, 4)));
+  };
+}
+function send(m) { if (ws && ws.readyState === 1) { ws.send(JSON.stringify(m)); return true; } return false; }
+async function checkRoom() {
+  try {
+    const r = await fetch(`/api/rooms/${code}`);
+    const j = await r.json();
+    if (!j.exists) { closedForGood = true; showConn(""); renderNoRoom(); return; }
+  } catch (e) {}
+  retry++; showConn("Reconnecting");
+  retryTimer = setTimeout(connect, 3000);
+}
+function showConn(text) {
+  const el = $("conn");
+  el.hidden = !text;
+  el.className = "status warn";
+  el.innerHTML = text ? `<span class="waiting">${esc(text)}</span>` : "";
+}
+let pendingJoin = false;
+
+function onMessage(m) {
+  if (m.t === "view") {
+    /* The screen sends seconds left; count down from when it arrived, so phone clocks don't matter */
+    const t = m.common && m.common.timer;
+    st.timerEnds = t && t.running ? Date.now() + t.left * 1000 : null;
+    st.view = m.common; st.mine = m.mine; st.joined = m.joined; st.name = m.name || st.name;
+    if ("hostOnline" in m) st.hostOnline = m.hostOnline;
+    st.removed = null; st.error = "";
+    render();
+  } else if (m.t === "host") { st.hostOnline = m.online; render(); }
+  else if (m.t === "removed") { st.removed = m.reason || "The leader removed your team."; st.joined = false; store.del(`sg-name-${code}`); render(true); }
+  else if (m.t === "error") { st.error = m.message; render(true); }
+}
+
+/* ---------- Screens ---------- */
+function render(force) {
+  if (!code) return renderCode();
+  $("code-tag").hidden = false; $("code-tag").textContent = code;
+  if (st.removed) return renderRemoved();
+  if (!st.joined) return renderJoin();
+  const v = st.view, mine = st.mine || {};
+  if (mine.color) document.documentElement.style.setProperty("--team", mine.color);
+  const phase = v && v.phase;
+  const key = `${phase}|${v && v.key || ""}|${mine.team ?? ""}|${st.hostOnline}`;
+  if (phase === "round") {
+    if (key !== shownKey || force) renderRound(key); else updateRound();
+  } else {
+    shownKey = key;
+    if (!v || !st.hostOnline && !phase) renderLobby();
+    else if (phase === "lobby") renderLobby();
+    else if (phase === "reveal") renderReveal();
+    else if (phase === "scores" || phase === "final") renderScores();
+    else renderLobby();
+  }
+}
+
+function renderCode() {
+  shownKey = "code";
+  app.innerHTML = `<form class="panel" id="code-form">
+    <span class="eyebrow">Join a game</span>
+    <h2>Enter the code on the screen</h2>
+    <div><label for="code-in">Game code</label>
+    <input class="field code" id="code-in" maxlength="6" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="ABCD" required></div>
+    <button class="btn primary" type="submit">Next</button>
+  </form>`;
+  $("code-in").focus();
+  $("code-form").addEventListener("submit", e => {
+    e.preventDefault();
+    const c = $("code-in").value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (c.length < 4) return;
+    history.replaceState(null, "", `?code=${c}`);
+    code = c; start();
+  });
+}
+
+function renderJoin() {
+  shownKey = "join";
+  const suggestion = store.get(`sg-name-${code}`) || st.name || "";
+  app.innerHTML = `<form class="panel" id="join-form">
+    <span class="eyebrow">You're the team's phone</span>
+    <h2>What's your team called?</h2>
+    <p class="muted">Your team's name shows on the big screen. First names or a fun name only.</p>
+    <div><label for="name-in">Team name</label>
+    <input class="field" id="name-in" maxlength="24" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="The Watchmen" value="${esc(suggestion)}" required></div>
+    <div class="err" id="err">${esc(st.error)}</div>
+    <button class="btn primary" type="submit">Join game</button>
+  </form>`;
+  const inp = $("name-in"); inp.focus();
+  $("join-form").addEventListener("submit", e => {
+    e.preventDefault();
+    const name = inp.value.trim();
+    if (!name) return;
+    store.set(`sg-name-${code}`, name);
+    st.error = "";
+    if (!send({ t: "join", name })) pendingJoin = true;
+    $("err").textContent = "Joining…";
+  });
+}
+
+function teamHeader() {
+  const mine = st.mine || {};
+  return `<div class="row"><div class="who"><span class="swatch"></span>${esc(mine.name || st.name)}</div></div>`;
+}
+function hostNote() {
+  return st.hostOnline ? "" : `<div class="status warn"><span class="waiting">The leader's screen is offline. Hang tight</span></div>`;
+}
+
+function renderLobby() {
+  const mine = st.mine || {};
+  const v = st.view || {};
+  const waiting = !mine.hasOwnProperty("team");
+  app.innerHTML = `<div class="panel team">
+    <span class="eyebrow">${waiting ? "Joining" : "You're in"}</span>
+    ${teamHeader()}
+    ${hostNote()}
+    <p class="${waiting ? "waiting" : ""}">${waiting ? "Waiting for the leader's screen to add your team" : v.phase === "lobby" ? "Look at the big screen. The game starts soon. When a round starts, the question shows up here." : "Waiting for the next round"}</p>
+    ${!waiting && v.phase === "lobby" ? `<form id="rename" class="row" style="gap:8px;flex-wrap:nowrap">
+      <input class="field" id="rename-in" maxlength="24" value="${esc(mine.name || st.name)}" aria-label="Team name" style="font-size:1.4rem;padding:6px 10px">
+      <button class="btn small" type="submit">Rename</button></form>` : ""}
+    ${v.teams && v.teams.length ? `<p class="muted">${v.teams.length} team${v.teams.length === 1 ? "" : "s"}: ${v.teams.map(t => esc(t.name)).join(", ")}</p>` : ""}
+  </div>`;
+  const f = $("rename");
+  if (f) f.addEventListener("submit", e => {
+    e.preventDefault();
+    const name = $("rename-in").value.trim();
+    if (!name) return;
+    store.set(`sg-name-${code}`, name);
+    send({ t: "join", name });
+  });
+}
+
+function timerLeft() {
+  const t = st.view && st.view.timer;
+  if (!t || !t.len) return null;
+  if (t.running && st.timerEnds) return Math.max(0, Math.ceil((st.timerEnds - Date.now()) / 1000));
+  return t.left;
+}
+let tick = null;
+
+function renderRound(key) {
+  shownKey = key;
+  const v = st.view, mine = st.mine || {};
+  if (st.drafted !== v.key) { st.draft = mine.answer || ""; st.drafted = v.key; }
+  app.innerHTML = `<div class="panel team">
+    <div class="row">
+      <span class="eyebrow">Round ${v.round} of ${v.total}</span>
+      <span class="timer" id="timer" ${timerLeft() === null ? "hidden" : ""}></span>
+    </div>
+    <h2 class="prompt">${esc(v.prompt)}</h2>
+    ${v.note ? `<p class="muted">${esc(v.note)}</p>` : ""}
+  </div>
+  ${hostNote()}
+  <form class="panel team" id="ans-form">
+    ${teamHeader()}
+    <div><label for="ans-in">Your team's answer</label>
+    <input class="field" id="ans-in" maxlength="120" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="One answer" value="${esc(st.draft)}"></div>
+    <button class="btn primary" type="submit" id="ans-btn">Send answer</button>
+    <div id="sent" class="sent" aria-live="polite"></div>
+  </form>`;
+  const inp = $("ans-in");
+  inp.addEventListener("input", () => { st.draft = inp.value; paintSent(); });
+  $("ans-form").addEventListener("submit", e => {
+    e.preventDefault();
+    const text = inp.value.trim();
+    if (!text) { inp.focus(); return; }
+    st.sentText = text; st.sentRound = v.key;
+    if (!send({ t: "answer", round: v.key, text })) { $("sent").innerHTML = `<span class="status bad" style="display:block">Not connected. Try again in a moment.</span>`; return; }
+    inp.blur();
+    paintSent();
+  });
+  updateRound();
+}
+function updateRound() {
+  paintSent();
+  clearInterval(tick);
+  paintTimer();
+  const t = st.view.timer;
+  if (t && t.running) tick = setInterval(paintTimer, 250);
+}
+function paintTimer() {
+  const el = $("timer"); if (!el) return;
+  const left = timerLeft();
+  el.hidden = left === null;
+  if (left === null) return;
+  el.textContent = left;
+  el.classList.toggle("low", left <= 10 && left > 0);
+  el.classList.toggle("done", left === 0);
+}
+function paintSent() {
+  const el = $("sent"); if (!el) return;
+  const mine = st.mine || {};
+  const v = st.view;
+  const confirmed = mine.answer && mine.round === v.key ? mine.answer : null;
+  const typed = ($("ans-in") || {}).value?.trim() || "";
+  let html = "";
+  if (confirmed && typed === confirmed) html = `<span class="status ok" style="display:block">The leader has your answer: <b>${esc(confirmed)}</b><br><span style="font-size:1.05rem">You can change it until the answers are revealed.</span></span>`;
+  else if (st.sentRound === v.key && st.sentText === typed && typed) html = `<span class="status warn waiting" style="display:block">Sending</span>`;
+  else if (confirmed) html = `<span class="muted">Sent so far: <b>${esc(confirmed)}</b>. Tap Send to change it.</span>`;
+  else html = `<span class="muted">Talk it over with your team, then send one answer.</span>`;
+  el.innerHTML = html;
+  $("ans-btn").textContent = confirmed ? (typed === confirmed ? "Sent" : "Change answer") : "Send answer";
+  $("ans-btn").disabled = !!confirmed && typed === confirmed;
+}
+
+function renderReveal() {
+  clearInterval(tick);
+  const v = st.view, mine = st.mine || {}, r = mine.result;
+  app.innerHTML = `<div class="panel team">
+    <span class="eyebrow">Round ${v.round} of ${v.total} · Reveal</span>
+    <h2>${esc(v.prompt)}</h2>
+  </div>
+  <div class="panel team">
+    ${teamHeader()}
+    ${r ? `<div class="result">${r.text ? esc(r.text) : `<span class="muted">No answer</span>`}</div>
+      <span class="chip ${r.tier ? "t" + r.tier : "miss"}">${esc(r.label)}</span>
+      ${r.detail ? `<p class="muted">${esc(r.detail)}</p>` : ""}
+      <div class="pts">+${r.pts}</div>` : `<p class="waiting">Look at the big screen</p>`}
+  </div>`;
+}
+
+function renderScores() {
+  clearInterval(tick);
+  const v = st.view, mine = st.mine || {};
+  const list = v.standings || [];
+  let rank = 0, prev = null;
+  app.innerHTML = `<div class="panel team">
+    <span class="eyebrow">${v.phase === "final" ? "Final scores" : `After round ${v.round} of ${v.total}`}</span>
+    ${teamHeader()}
+    <ol class="standings">${list.map((s, pos) => { if (s.score !== prev) { rank = pos + 1; prev = s.score; }
+      return `<li class="${s.team === mine.team ? "me" : ""}"><span class="rk">${rank}</span><span class="swatch" style="background:${esc(s.color)}"></span><span class="nm">${esc(s.name)}</span><span class="sc">${s.score}</span></li>`; }).join("")}</ol>
+    ${v.phase === "final" ? "" : `<p class="muted waiting">Next round coming up</p>`}
+  </div>`;
+}
+
+function renderRemoved() {
+  clearInterval(tick);
+  app.innerHTML = `<div class="panel">
+    <span class="eyebrow">Not joined</span>
+    <h2>You're not on a team right now</h2>
+    <p>${esc(st.removed)}</p>
+    <button class="btn primary" type="button" id="again">Join again</button>
+  </div>`;
+  $("again").addEventListener("click", () => { st.removed = null; st.joined = false; renderJoin(); });
+}
+function renderNoRoom() {
+  app.innerHTML = `<div class="panel">
+    <span class="eyebrow">Hmm</span>
+    <h2>No game with code ${esc(code)}</h2>
+    <p class="muted">Check the code on the big screen and try again.</p>
+    <button class="btn primary" type="button" id="retype">Enter a different code</button>
+  </div>`;
+  $("retype").addEventListener("click", () => { history.replaceState(null, "", location.pathname); code = ""; $("code-tag").hidden = true; renderCode(); });
+}
+function renderEnded() {
+  clearInterval(tick);
+  app.innerHTML = `<div class="panel"><span class="eyebrow">Game over</span><h2>This game has closed</h2><p class="muted">Thanks for playing.</p></div>`;
+}
+
+function start() {
+  closedForGood = false; everOpen = false; retry = 0;
+  pendingJoin = !!store.get(`sg-name-${code}`);
+  render();
+  connect();
+}
+document.addEventListener("visibilitychange", () => {
+  /* Phones freeze background tabs; reconnect as soon as the page is visible again */
+  if (document.visibilityState === "visible" && code && !closedForGood && (!ws || ws.readyState > 1)) { retry = 0; connect(); }
+});
+if (code) start(); else renderCode();
+</script>
+</body>
+</html>

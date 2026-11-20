@@ -29,8 +29,10 @@ Phone joining needs the site's server (below). The games still work without it, 
 npm install
 npm run dev       # http://localhost:5173 on this computer only
 npm run dev:lan   # also on your network address, so phones on the same Wi-Fi can join
-npm run deploy    # publish to Cloudflare
+npm run deploy    # publish to coolseminarygames.win
 ```
+
+The live site is the `seminary-games` Worker on `coolseminarygames.win` and `www.coolseminarygames.win` (set in `cloudflare.config.ts`). Pushing to GitHub does not publish it; run `npm run deploy`. The older `seminary-games` Pages project no longer serves the domain.
 
 When testing with phones locally, open the game on the computer using the network address that `npm run dev:lan` prints, not `localhost`. The QR code uses whatever address the projector page was opened from.
 

@@ -13,6 +13,8 @@ const CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // no 0/O, 1/I/L
 const ROOM_TTL_MS = 24 * 60 * 60 * 1000;
 const MAX_PLAYERS = 40;
 const MAX_TEXT = 120;
+const PING = JSON.stringify({ t: "ping" }); // must match what join/ and the game send
+const PONG = JSON.stringify({ t: "pong" });
 
 type Player = { name: string; joinedAt: number };
 type Attachment = { role: "host" } | { role: "player"; pid: string };
@@ -33,6 +35,13 @@ const validCode = (c: string) => c.length >= 4 && c.length <= 6 && [...c].every(
 const validId = (s: string | null): s is string => !!s && /^[A-Za-z0-9_-]{8,64}$/.test(s);
 
 export class GameRoom extends DurableObject<Env> {
+  constructor(ctx: DurableObjectState, env: Env) {
+    super(ctx, env);
+    // Screens and phones send a keep-alive every 25 seconds. Cloudflare answers it without waking
+    // the room, so an idle room stays hibernated (and unbilled) between real messages.
+    ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair(PING, PONG));
+  }
+
   /** Claims an unused room for a new host. Returns false if the code is taken. */
   async open(hostKey: string): Promise<boolean> {
     const existing = await this.ctx.storage.get<string>("hostKey");
@@ -46,8 +55,10 @@ export class GameRoom extends DurableObject<Env> {
     return !!(await this.ctx.storage.get<string>("hostKey"));
   }
 
+  /** Runs 24 hours after the room opened, or when the leader stops phones: disconnect everyone and erase the room. */
   async alarm(): Promise<void> {
     for (const ws of this.ctx.getWebSockets()) ws.close(4000, "Room closed");
+    await this.ctx.storage.deleteAlarm();
     await this.ctx.storage.deleteAll();
   }
 
@@ -90,7 +101,7 @@ export class GameRoom extends DurableObject<Env> {
     if (!msg || typeof msg !== "object") return;
     const att = ws.deserializeAttachment() as Attachment | null;
     if (!att) return;
-    if (msg.t === "ping") { ws.send(JSON.stringify({ t: "pong" })); return; }
+    if (msg.t === "ping") { ws.send(PONG); return; } // normally answered by the auto-response above
     if (att.role === "host") await this.fromHost(msg);
     else await this.fromPlayer(att.pid, ws, msg);
   }

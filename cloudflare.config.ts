@@ -7,6 +7,7 @@ const worker = defineWorker({
   entrypoint,
   // Pages are static files; only /api/* runs the Worker.
   assets: { runWorkerFirst: ["/api/*"], htmlHandling: "auto-trailing-slash" },
+  domains: ["coolseminarygames.win", "www.coolseminarygames.win"],
   exports: {
     GameRoom: exports.durableObject({ storage: "sqlite" })
   },

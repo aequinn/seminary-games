@@ -7,6 +7,8 @@ Small browser games for seminary class. Each game is a single `index.html` in it
 | Game | Folder | What it is |
 |---|---|---|
 | One in a Millennium | [`one-in-a-millennium/`](one-in-a-millennium/) | Old Testament team trivia where rarer correct answers score more, with Jeremiah–Joel and Doctrinal Mastery rounds. |
+| Scripture Man | [`scriptureman/`](scriptureman/) | Draw questions at random onto a 5×5 board and claim each square. |
+| ZAP! | [`zap/`](zap/) | Team question board with surprise actions: steal, swap, double, or get zapped. |
 
 ## Joining from phones
 

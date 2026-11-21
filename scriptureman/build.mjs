@@ -17,7 +17,7 @@ const replaceOnce = (pattern, make, what) => {
   html = html.replace(pattern, make);
 };
 replaceOnce(/<link rel="stylesheet" href="style\.css">/, () => `<style>\n${css}</style>`, "style.css");
-replaceOnce(/<script src="script\.js"><\/script>/, () => `<script>\n${js.replace(/<\/script/gi, "<\\/script")}</script>`, "script.js");
+replaceOnce(/<script type="module" src="script\.js"><\/script>/, () => `<script type="module">\n${js.replace(/<\/script/gi, "<\\/script")}</script>`, "script.js");
 
 mkdirSync(join(dir, "build"), { recursive: true });
 writeFileSync(join(dir, "build", "scriptureman.html"), html);

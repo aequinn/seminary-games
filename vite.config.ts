@@ -3,7 +3,7 @@ import { cloudflare } from "@cloudflare/vite-plugin";
 import { resolve } from "node:path";
 
 // Every page is its own HTML entry, so each game keeps its own folder.
-const pages = ["index.html", "join/index.html", "one-in-a-millennium/index.html"];
+const pages = ["index.html", "join/index.html", "one-in-a-millennium/index.html", "scriptureman/index.html", "zap/index.html"];
 
 export default defineConfig({
   plugins: [cloudflare()],

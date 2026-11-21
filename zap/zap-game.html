@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ZAP! Game Board</title>
+<style>
+:root{--bg:#f5f2ea;--card:#fff;--ink:#1d1b26;--mut:#6b6880;--line:#ddd8ca;--acc:#6d3cf0;--good:#1f9d55;--bad:#d6334a;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15141b;--card:#201f2a;--ink:#f1eefb;--mut:#a29fb8;--line:#363447;--acc:#9a7bff;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#15141b;--card:#201f2a;--ink:#f1eefb;--mut:#a29fb8;--line:#363447;--acc:#9a7bff;color-scheme:dark}
+*{box-sizing:border-box}[hidden]{display:none!important}
+html,body{margin:0}body{background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+.wrap{max-width:980px;margin:0 auto;padding:16px}
+h1{font-size:2rem;margin:.2em 0;letter-spacing:.02em}h1 b{color:var(--acc)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:12px 0}
+label{display:block;font-weight:600;margin:10px 0 4px}
+input,select,textarea{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+textarea{font-family:ui-monospace,monospace;font-size:.82rem;min-height:110px}
+button{font:inherit;font-weight:600;padding:9px 14px;border-radius:10px;border:2px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button:hover{border-color:var(--acc)}
+button.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+button.good{border-color:var(--good);color:var(--good)}button.bad{border-color:var(--bad);color:var(--bad)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.row>*{flex:1 1 140px}
+.mut{color:var(--mut);font-size:.9rem}
+#score{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.team{background:var(--card);border:2px solid var(--line);border-top:6px solid var(--c);border-radius:12px;padding:8px 12px;text-align:center}
+.team.on{box-shadow:0 0 0 3px var(--c)}
+.team .n{font-weight:700}.team .s{font-size:2.2rem;font-weight:800;line-height:1.1}
+.team .adj button{padding:0 9px;font-size:.9rem;border-width:1px}
+#grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0}
+.tile{background:var(--acc);border-radius:12px;padding:6px;color:#fff;text-align:center}
+.tile .num{font-size:1.5rem;font-weight:800}
+.tile .h{display:flex;gap:4px;margin-top:4px}
+.tile .h button{flex:1;padding:6px 0;border:0;background:rgba(255,255,255,.25);color:#fff}
+.tile .h button:hover{background:rgba(255,255,255,.45)}
+.tile .h button:disabled{opacity:.35;cursor:default;text-decoration:line-through}
+#log{font-size:.88rem;color:var(--mut);max-height:150px;overflow:auto}#log div{padding:2px 0;border-bottom:1px solid var(--line)}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px;z-index:20}
+#mbox{background:var(--card);border-radius:16px;padding:20px;max-width:520px;width:100%;max-height:90vh;overflow:auto}
+#mbox h2{margin:0 0 8px}.q{font-size:1.3rem;font-weight:600}.ans{font-size:1.2rem;color:var(--good);font-weight:700}
+#mo{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}#mo button{flex:1 1 auto;border-width:3px}
+#tm{display:flex;align-items:center;gap:10px;margin-top:12px}#tt{font-size:2.2rem;font-weight:800;font-variant-numeric:tabular-nums;min-width:4ch}
+@media(max-width:560px){#grid{gap:5px}.tile .num{font-size:1.1rem}}
+</style></head><body><div class="wrap">
+<h1><b>ZAP!</b> Game Board</h1>
+
+<div id="setup">
+ <div class="panel">
+  <div class="row"><div><label for="nt">Number of teams</label><select id="nt"><option>2</option><option selected>3</option><option>4</option><option>5</option></select></div>
+  <div><label for="base">Points for a correct answer</label><input id="base" type="number" value="2"></div>
+  <div><label for="secs">Answer timer (seconds, 0 = off)</label><input id="secs" type="number" value="30" min="0"></div></div>
+  <div id="names" class="row"></div>
+ </div>
+ <div class="panel">
+  <label for="csvf">Questions (.csv)</label>
+  <input id="csvf" type="file" accept=".csv,.txt,.tsv">
+  <p class="mut">Columns: <b>question, answer, action</b> (action is optional: use an action name from the list below, or leave blank for a random one). The board needs 32 questions (16 cards × 2). With fewer, they repeat; with more, extras are ignored. You can also paste CSV here:</p>
+  <textarea id="csvt" placeholder="question,answer,action"></textarea>
+  <div class="row" style="margin-top:8px"><button id="sample">Load sample questions</button><button id="tpl" hidden>Download CSV template</button><label style="margin:0;font-weight:400"><input type="checkbox" id="shuf" checked style="width:auto"> Shuffle questions</label></div>
+  <p class="mut" id="cstat"></p>
+ </div>
+ <div class="panel">
+  <details><summary><b>Actions</b> (edit to add or change)</summary>
+   <p class="mut">A JSON list. Each action has a <b>name</b>, <b>text</b> shown to players, <b>count</b> (copies in the random deck, 0 = only used when named in CSV), and a <b>type</b>:<br>
+   <code>add</code> (amount, target: self | pick | others | all), <code>zap</code> (target), <code>swap</code>, <code>double</code>, <code>equalize</code>, <code>steal</code>, <code>coin</code>, <code>dice</code>, <code>rps</code>, <code>safety</code>, <code>peek</code>, <code>bonus</code> (amount), <code>none</code>.<br>
+   Example: {"name":"+3 to all","text":"Everyone gets 3!","type":"add","target":"all","amount":3,"count":2}</p>
+   <textarea id="acts" style="min-height:260px"></textarea>
+   <button id="reset" style="margin-top:6px">Reset to defaults</button>
+  </details>
+ </div>
+ <button class="pri" id="start" style="font-size:1.2rem;width:100%">Start game</button>
+ <p class="mut" id="err" style="color:var(--bad)"></p>
+</div>
+
+<div id="game" hidden>
+ <div id="score"></div>
+ <div id="grid"></div>
+ <div class="row"><button id="end">End game</button><button id="again">New setup</button></div>
+ <div class="panel"><b>Log</b><div id="log"></div></div>
+</div>
+</div>
+
+<div id="modal" hidden><div id="mbox"><h2 id="mt"></h2><div id="mb"></div><div id="tm" hidden><span id="tt">0:30</span><button id="tgo">Start</button><button id="trs">Reset</button></div><div id="mo"></div></div></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const COLORS=['#e5484d','#2f7de1','#2fa84f','#e08a00','#9b4dca'];
+const A=(name,text,type,o={},count=1)=>Object.assign({name,text,type,count},o);
+const DEFAULTS=[
+A('ZAP a team','Pick one other team to ZAP!','zap',{target:'pick'},3),
+A('Switch scores','Switch scores with another team','swap',{},3),
+A('Double','DOUBLE your points!','double'),
+A('Rock Paper Scissors','Pick a team to play Rock, Paper, Scissors. Loser is ZAPPED!','rps'),
+A('Safety','SAFETY card: protects you from one future card.','safety'),
+A('+2 you','Add two points to your score','add',{target:'self',amount:2},2),
+A('ZAP self','ZAP! your own team!','zap',{target:'self'},2),
+A('+2 other','Add two points to one other team','add',{target:'pick',amount:2},2),
+A('-2 you','Subtract two points from your score','add',{target:'self',amount:-2},3),
+A('ZAP all','All teams have been ZAPPED!','zap',{target:'all'},2),
+A('Dice','All teams roll a die. Odd = ZAPPED. Even = +5 points!','dice'),
+A('+10 you','Add 10 points to your score','add',{target:'self',amount:10}),
+A('-2 other','Subtract two points from one other team','add',{target:'pick',amount:-2},2),
+A('+5 you','Add 5 points to your score','add',{target:'self',amount:5}),
+A('+2 others','Add two points to all other teams','add',{target:'others',amount:2}),
+A('+5 other','Add 5 points to one other team','add',{target:'pick',amount:5}),
+A('Coin toss','Choose a team. Call heads or tails. Win: take half their points. Lose: they take half of yours.','coin'),
+A('See the future','Choose 1 other card to see privately.','peek'),
+A('Equalizer','The Equalizer! All other teams’ scores change to equal yours.','equalize'),
+A('Ultimate steal','Ultimate Steal! Take all other teams’ points. They are left with zero.','steal'),
+A('Bonus draw','BONUS Draw! Add two points to all other teams and draw another card.','bonus',{amount:2})
+];
+const SAMPLE=`question,answer,action
+Who built the ark?,Noah,
+Who was swallowed by a great fish?,Jonah,
+Which giant did David defeat?,Goliath,
+Who led Israel out of Egypt?,Moses,Ultimate steal
+How many days did the flood rains fall?,40,
+Who was thrown into the lions’ den?,Daniel,
+What is the first book of the Bible?,Genesis,`;
+let G;
+
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a}
+function parseCSV(t){t=t.replace(/^\uFEFF/,'');const f1=t.split(/\r?\n/)[0],D=(f1.includes(',')||!f1.includes(';'))?',':';';const rows=[];let r=[],c='',q=false;
+ for(let i=0;i<t.length;i++){const ch=t[i];
+  if(q){if(ch==='"'){if(t[i+1]==='"'){c+='"';i++}else q=false}else c+=ch}
+  else if(ch==='"'&&c==='')q=true;
+  else if(ch===D||ch==='\t'){r.push(c);c=''}
+  else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&t[i+1]==='\n')i++;r.push(c);rows.push(r);r=[];c=''}
+  else c+=ch}
+ if(c||r.length){r.push(c);rows.push(r)}
+ let out=rows.filter(r=>r.some(x=>x.trim()));
+ if(out.length&&/^question/i.test(out[0][0].trim()))out.shift();
+ return out.filter(r=>r[0]&&r[0].trim()).map(r=>({q:r[0].trim(),a:(r[1]||'').trim(),act:(r[2]||'').trim()}))}
+
+function names(){const n=+$('#nt').value,old=[...document.querySelectorAll('#names input')].map(i=>i.value);
+ $('#names').innerHTML='';for(let i=0;i<n;i++){const d=document.createElement('div');d.innerHTML=`<label>Team ${i+1} name</label><input value="${esc(old[i]||'Team '+(i+1))}">`;$('#names').appendChild(d)}}
+function csvStat(){const n=parseCSV($('#csvt').value).length;$('#cstat').textContent=n?`${n} question${n==1?'':'s'} loaded`+(n<32?` (will repeat to fill 32 slots)`:n>32?' (only the first 32 are used)':''):($('#csvt').value.trim()?'No questions found. The first column should hold the question text.':'')}
+$('#nt').onchange=names;names();
+$('#acts').value=JSON.stringify(DEFAULTS,null,1);
+$('#reset').onclick=()=>$('#acts').value=JSON.stringify(DEFAULTS,null,1);
+$('#sample').onclick=()=>{$('#csvt').value=SAMPLE;csvStat()};
+const TPL='question,answer,action\nWho built the ark?,Noah,\n"Which city, in Genesis, had a famous tower?",Babel,\nWho led Israel out of Egypt?,Moses,Ultimate steal\n';
+if(window.claude&&claude.use)claude.use('downloads').then(d=>{if(!d)return;const b=$('#tpl');b.hidden=false;b.onclick=()=>d.save({filename:'zap-questions-template.csv',data:TPL}).catch(()=>{})}).catch(()=>{});
+$('#csvt').oninput=csvStat;
+$('#csvf').onchange=e=>{const f=e.target.files[0];if(!f)return;
+ const fr=new FileReader();
+ fr.onload=()=>{let s;try{s=new TextDecoder('utf-8',{fatal:true}).decode(fr.result)}catch(x){s=new TextDecoder('windows-1252').decode(fr.result)}$('#csvt').value=s;csvStat();$('#cstat').textContent=f.name+': '+$('#cstat').textContent;e.target.value=''};
+ fr.onerror=()=>{$('#cstat').textContent='Could not read that file. Try pasting its contents into the box below.'};
+ fr.readAsArrayBuffer(f)};
+
+$('#start').onclick=()=>{
+ const err=$('#err');err.textContent='';
+ let lib;try{lib=JSON.parse($('#acts').value);if(!Array.isArray(lib))throw 0}catch(e){err.textContent='The actions JSON is not valid.';return}
+ let rows=parseCSV($('#csvt').value);
+ if(!rows.length){err.textContent='Please upload or paste some questions first (or load the sample).';return}
+ if($('#shuf').checked)rows=shuffle(rows);
+ let deck=[];lib.forEach(a=>{for(let i=0;i<(a.count??1);i++)deck.push(a)});deck=shuffle(deck);let di=0;
+ const find=n=>lib.find(a=>String(a.name).toLowerCase()===n.toLowerCase());
+ const slots=[];
+ for(let i=0;i<32;i++){const r=rows[i%rows.length];
+  let act=r.act&&find(r.act);
+  if(!act){if(!deck.length){err.textContent='Your action deck is empty.';return}act=deck[di++%deck.length]}
+  slots.push({q:r.q,a:r.a,act,used:false})}
+ const teams=[...document.querySelectorAll('#names input')].map((e,i)=>({name:e.value.trim()||'Team '+(i+1),score:0,safety:0,color:COLORS[i]}));
+ G={teams,slots,turn:0,base:+$('#base').value||0,secs:Math.max(0,+$('#secs').value||0),log:[]};
+ $('#setup').hidden=true;$('#game').hidden=false;log('Game started. '+teams[0].name+' goes first.');render()};
+$('#again').onclick=()=>{if(confirm('Leave this game and return to setup?')){$('#game').hidden=true;$('#setup').hidden=false}};
+$('#end').onclick=()=>final();
+
+function log(m){G.log.unshift(m);$('#log').innerHTML=G.log.slice(0,40).map(x=>`<div>${esc(x)}</div>`).join('')}
+function render(){
+ $('#score').innerHTML='';
+ G.teams.forEach((t,i)=>{const d=document.createElement('div');d.className='team'+(i==G.turn?' on':'');d.style.setProperty('--c',t.color);
+  d.innerHTML=`<div class="n">${esc(t.name)}${i==G.turn?' ◀':''}</div><div class="s">${t.score}</div><div class="mut">${t.safety?'🛡️ ×'+t.safety:'&nbsp;'}</div><div class="adj"><button>−</button> <button>+</button></div>`;
+  const [m,p]=d.querySelectorAll('.adj button');m.onclick=()=>{t.score--;render()};p.onclick=()=>{t.score++;render()};
+  $('#score').appendChild(d)});
+ $('#grid').innerHTML='';
+ for(let n=0;n<16;n++){const d=document.createElement('div');d.className='tile';
+  d.innerHTML=`<div class="num">${n+1}</div><div class="h"></div>`;
+  [0,1].forEach(s=>{const i=n*2+s,b=document.createElement('button');b.textContent=s?'B':'A';b.disabled=G.slots[i].used;b.onclick=()=>openSlot(i);d.querySelector('.h').appendChild(b)});
+  $('#grid').appendChild(d)}}
+
+function ask(title,body,opts,timer){return new Promise(res=>{
+ $('#mt').textContent=title;$('#mb').innerHTML=body||'';const o=$('#mo');o.innerHTML='';
+ tmStop();$('#tm').hidden=!(timer&&G.secs>0);if(timer)tmReset();
+ opts.forEach(x=>{const b=document.createElement('button');b.textContent=x.label;b.className=x.cls||'';if(x.color)b.style.borderColor=x.color;b.onclick=()=>{tmStop();$('#modal').hidden=true;res(x.value)};o.appendChild(b)});
+ $('#modal').hidden=false})}
+let TM={left:0,iv:null};
+function tmDraw(){const l=TM.left;$('#tt').textContent=Math.floor(l/60)+':'+String(l%60).padStart(2,'0');$('#tt').style.color=l<=0?'var(--bad)':''}
+function tmStop(){clearInterval(TM.iv);TM.iv=null;$('#tgo').textContent='Start'}
+function tmReset(){tmStop();TM.left=G.secs;tmDraw()}
+function beep(){try{const c=new AudioContext(),o=c.createOscillator();o.connect(c.destination);o.frequency.value=660;o.start();o.stop(c.currentTime+.6)}catch(e){}}
+$('#tgo').onclick=()=>{if(TM.iv){tmStop();return}if(TM.left<=0){TM.left=G.secs;tmDraw()}$('#tgo').textContent='Pause';TM.iv=setInterval(()=>{TM.left--;tmDraw();if(TM.left<=0){tmStop();beep()}},1000)};
+$('#trs').onclick=tmReset;
+const pickTeam=(src,title='Choose a team')=>ask(title,'',G.teams.filter(t=>t!==src).map(t=>({label:t.name,value:t,color:t.color})));
+const ok=(title,html)=>ask(title,html,[{label:'OK',value:1,cls:'pri'}]);
+
+function blocked(src,t){if(t!==src&&t.safety>0){t.safety--;log(`🛡️ ${t.name}’s Safety card blocked it!`);return true}return false}
+function zap(src,t){if(blocked(src,t))return;t.score=0;log(`⚡ ${t.name} was ZAPPED! Score is now 0.`)}
+function add(src,t,n){if(n<0&&blocked(src,t))return;t.score+=n;log(`${t.name} ${n>=0?'+':''}${n} points.`)}
+const half=x=>Math.max(0,Math.floor(x/2));
+
+async function run(a,src,depth=0){
+ const others=G.teams.filter(t=>t!==src);
+ await ok('🎴 '+a.name,`<p class="q">${esc(a.text)}</p>`);
+ switch(a.type){
+  case 'add':case 'zap':{const tg=a.target||'self';
+   const ts=tg==='self'?[src]:tg==='all'?G.teams:tg==='others'?others:[await pickTeam(src)];
+   ts.forEach(t=>a.type==='zap'?zap(src,t):add(src,t,+a.amount||0));break}
+  case 'swap':{const t=await pickTeam(src,'Swap scores with…');[src.score,t.score]=[t.score,src.score];log(`${src.name} and ${t.name} swapped scores.`);break}
+  case 'double':if(src.score>0)src.score*=2;log(`${src.name} doubled: ${src.score}.`);break;
+  case 'equalize':others.forEach(t=>t.score=src.score);log(`All other teams now have ${src.score}.`);break;
+  case 'steal':{const sum=others.reduce((s,t)=>s+t.score,0);others.forEach(t=>t.score=0);src.score+=sum;log(`${src.name} stole ${sum} points!`);break}
+  case 'safety':src.safety++;log(`🛡️ ${src.name} keeps a Safety card.`);break;
+  case 'rps':{const t=await pickTeam(src,'Play Rock, Paper, Scissors against…');
+   const w=await ask('Who won?','',[src,t].map(x=>({label:x.name,value:x,color:x.color})));
+   zap(w,w===src?t:src);break}
+  case 'coin':{const t=await pickTeam(src,'Coin toss against…');
+   const g=await ask('Heads or tails?',esc(src.name)+' calls it:',[{label:'Heads',value:'Heads'},{label:'Tails',value:'Tails'}]);
+   const f=Math.random()<.5?'Heads':'Tails';
+   if(f===g){const n=half(t.score);t.score-=n;src.score+=n;await ok(f+'! 🎉',`${esc(src.name)} wins ${n} points from ${esc(t.name)}.`);log(`Coin: ${src.name} took ${n} from ${t.name}.`)}
+   else{const n=half(src.score);src.score-=n;t.score+=n;await ok(f+'! 😬',`${esc(t.name)} takes ${n} points from ${esc(src.name)}.`);log(`Coin: ${t.name} took ${n} from ${src.name}.`)}
+   break}
+  case 'dice':{let h='';const rolls=G.teams.map(t=>[t,1+Math.random()*6|0]);
+   rolls.forEach(([t,r])=>h+=`<p>${esc(t.name)}: 🎲 ${r} ${r%2?'(odd, ZAPPED)':'(even, +5)'}</p>`);
+   await ok('Dice results',h);rolls.forEach(([t,r])=>r%2?zap(src,t):add(src,t,5));break}
+  case 'peek':{const open=G.slots.map((s,i)=>({s,i})).filter(x=>!x.s.used);
+   if(!open.length)break;
+   const i=await ask('Which card to peek at?','',open.map(x=>({label:(x.i>>1)+1+(x.i%2?'B':'A'),value:x.i})));
+   await ok('👀 Card '+((i>>1)+1)+(i%2?'B':'A'),`<p class="q">${esc(G.slots[i].act.text)}</p><p class="mut">Only the peeking team should look!</p>`);
+   log(`${src.name} peeked at a card.`);break}
+  case 'bonus':{others.forEach(t=>add(src,t,+a.amount||0));
+   const open=G.slots.filter(s=>!s.used);
+   if(open.length&&depth<3){const s=open[Math.random()*open.length|0];s.used=true;log(`${src.name} draws a bonus card.`);await run(s.act,src,depth+1)}break}
+  default:log(`${src.name} drew “${a.name}”: nothing happens.`)}
+}
+
+async function openSlot(i){
+ const s=G.slots[i],t=G.teams[G.turn],id=((i>>1)+1)+(i%2?'B':'A');
+ const q=`<p class="q">${esc(s.q)}</p>`,tried=[];let cur=t,right=0;
+ const teamBtns=l=>l.map(x=>({label:'Pass to '+x.name,value:x,color:x.color}));
+ while(cur){
+  tried.push(cur);
+  const act=await ask(`Card ${id} · ${cur.name}`,q,[{label:'Show answer',value:'show',cls:'pri'}].concat(teamBtns(G.teams.filter(x=>!tried.includes(x))),[{label:'Cancel',value:null}]),true);
+  if(act===null){if(tried.length==1)return;break}
+  if(act!=='show'){log(`${cur.name} passed card ${id} to ${act.name}.`);cur=act;continue}
+  right=await ask('Answer',q+`<p class="ans">${esc(s.a||'(no answer given)')}</p><p class="mut">Did ${esc(cur.name)} get it right?</p>`,[{label:'✓ Correct',value:1,cls:'good'},{label:'✗ Incorrect',value:0,cls:'bad'}]);
+  if(right)break;
+  log(`${cur.name} missed card ${id}.`);
+  const rest=G.teams.filter(x=>!tried.includes(x));if(!rest.length)break;
+  cur=await ask('Incorrect: another team can answer',q,teamBtns(rest).concat([{label:'No one (skip)',value:null}]));
+ }
+ if(right){s.used=true;cur.score+=G.base;log(`${cur.name} answered ${id} correctly (+${G.base}).`);render();await run(s.act,cur)}
+ else log(`Card ${id} stays on the board.`);
+ G.turn=(G.turn+1)%G.teams.length;render();
+ if(G.slots.every(x=>x.used))final()}
+
+async function final(){
+ const ranked=G.teams.slice().sort((a,b)=>b.score-a.score);
+ const h=ranked.map((t,i)=>`<p class="q">${i?'':'🏆 '}${esc(t.name)}: ${t.score}</p>`).join('');
+ const v=await ask('Standings',h,[{label:'Keep playing',value:0},{label:'New setup',value:1,cls:'pri'}]);
+ if(v){$('#game').hidden=true;$('#setup').hidden=false}}
+</script></body></html>

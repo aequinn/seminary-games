@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Scripture Man</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+<h1>Scripture Man</h1>
+<p class="sub" id="sub">Load your questions, then draw them at random onto the board.</p>
+
+<section id="setup">
+  <div class="card">
+    <h2>Load questions</h2>
+    <div class="tabs" role="tablist">
+      <button class="on" data-tab="sample">Sample set</button>
+      <button data-tab="file">Upload file</button>
+      <button data-tab="paste">Paste</button>
+      <button data-tab="url">Web link</button>
+    </div>
+    <div id="t-sample"><p class="hint" style="margin:0">20 starter questions, ready to play.</p></div>
+    <div id="t-file" class="hidden">
+      <input type="file" id="file" accept=".json,.csv,.txt">
+      <p class="hint">A .json or .csv file. Format below.</p>
+    </div>
+    <div id="t-paste" class="hidden">
+      <textarea id="paste" placeholder='[{"question":"Who built the ark?","answer":"Noah","reference":"Genesis 6"}]'></textarea>
+      <button id="loadPaste" style="margin-top:8px">Load pasted text</button>
+    </div>
+    <div id="t-url" class="hidden">
+      <input type="text" id="url" placeholder="Published Google Sheet CSV link, or a JSON link">
+      <button id="loadUrl" style="margin-top:8px">Fetch questions</button>
+      <p class="hint">Google Sheet: File &gt; Share &gt; Publish to web &gt; choose CSV. Links only fetch when this page is hosted on your own site; the preview here blocks outside requests, so use Upload or Paste instead.</p>
+    </div>
+    <div class="status" id="status"></div>
+  </div>
+  <div class="card">
+    <h2>Question format</h2>
+    <p class="hint" style="margin-top:0"><b>JSON:</b> a list of objects with <code>question</code>, <code>answer</code>, optional <code>reference</code> and optional <code>coordinate</code> (like "C3").<br><b>Sheet or CSV:</b> columns named <code>question</code>, <code>answer</code>, <code>reference</code>, <code>coordinate</code>. Leave coordinate empty to assign cells at random. Up to 25 questions fit the board.</p>
+  </div>
+  <button class="primary" id="start" disabled>Start game</button>
+</section>
+
+<section id="game" class="hidden">
+  <div class="bar"><span id="prog"></span></div>
+  <div class="card"><div class="board" id="board" aria-label="Game board"></div></div>
+  <div class="card" id="qcard">
+    <div id="idle"><button class="primary" id="draw">Draw next question</button></div>
+    <div id="active" class="hidden">
+      <span class="coord" id="coord"></span>
+      <p class="q" id="qtext"></p>
+      <div id="ansbox" class="hidden"><div class="ans"><b id="atext"></b><br><small id="aref"></small></div></div>
+      <div class="row">
+        <button id="reveal">Show answer</button>
+        <button class="primary" id="next" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="end" class="hidden">
+  <div class="card"><h2 id="final"></h2><div id="list"></div></div>
+  <div class="row"><button class="primary" id="again">Play again</button><button id="reload">Load different questions</button></div>
+</section>
+</main>
+
+<script src="script.js"></script>
+</body>
+</html>

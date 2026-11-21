@@ -42,3 +42,13 @@ When testing with phones locally, open the game on the computer using the networ
 2. Put the game's page in that folder as `index.html`.
 3. Add it to the `pages` list in `vite.config.ts`.
 4. Add a card for it to the menu in the top-level `index.html`, and a row to the table above.
+
+## Scripture Man
+
+`scriptureman/` is kept as separate files for editing: `index.html`, `style.css`, and `script.js`. Opening `index.html` directly plays the game. To make the one-file copy for deploying, run:
+
+```sh
+npm run build:scriptureman
+```
+
+That writes `scriptureman/build/scriptureman.html` with the CSS and JavaScript inlined. Rebuild after every edit.

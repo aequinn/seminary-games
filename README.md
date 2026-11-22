@@ -10,6 +10,30 @@ Small browser games for seminary class. Each game is a single `index.html` in it
 | Scripture Man | [`scriptureman/`](scriptureman/) | Draw questions at random onto a 5×5 board and claim each square. |
 | ZAP! | [`zap/`](zap/) | Team question board with surprise actions: steal, swap, double, or get zapped. |
 
+## Your own One in a Millennium categories
+
+On the setup screen, under **My categories**, click **Download template**, edit it in Excel or Google Sheets, save it as CSV (in Excel, **CSV UTF-8**), then click **Upload CSV**. The game checks the whole file, lists problems by row, and shows a preview before saving.
+
+Each row is one answer.
+
+| Column | Required | What goes in it |
+|---|---|---|
+| `category` | On every row | Rows with the same category make one round. |
+| `question` | Once per category | What teams see. |
+| `answer` | On every row | One answer. |
+| `level` | On every row | 1–5 for 10, 25, 50, 75 or 100 points. 0 means "Close, but no". |
+| `reference` | No | Shown at the reveal. |
+| `also_accept` | No | Other wordings, separated by semicolons. Small typos already count. |
+| `explanation` | No | Why it matters or, for level 0, why it doesn't count. |
+| `hint` | No | A line under the question, one per category. |
+| `difficulty` | No | Easy, Medium or Hard, one per category. Medium if left out. |
+
+- Uploading a category with the same name replaces it.
+- Categories are saved in that browser only, and the file is never uploaded to the server. Phones receive only what they display during a game. To back up, share, or move categories to another computer, click **Export my categories** and upload that file there.
+- The website and a copy opened as a file keep separate lists.
+- A game in progress keeps the version of the categories it started with.
+- Uploads match answers by keyword. A reference alone doesn't count as an answer unless it's listed in `also_accept`.
+
 ## Joining from phones
 
 Teams can play from a phone instead of the leader typing every answer.

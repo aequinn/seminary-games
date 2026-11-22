@@ -1241,10 +1241,20 @@ function keysOf(mode, display, aliases) {
   all.forEach(k => { out.add(k); if (mode === "name") out.add(stripLead(k)); });
   return [...out];
 }
+/* Samuel, Kings and Chronicles are one answer each but two books each, so count books, not answers. */
+function bookRefs(answers) {
+  let next = 1;
+  return answers.map(s => {
+    const first = next;
+    next += s.split("|")[0].endsWith("(1 & 2)") ? 2 : 1;
+    return next - first === 2 ? `Books ${first}–${first + 1} of 39` : `Book ${first} of 39`;
+  });
+}
 const BUILT_IN = RAW.map(c => {
+  const books = c.id === "books" ? bookRefs(c.a) : null;
   const a = c.a.map((s, idx) => {
     const [d, t, r, al, why] = s.split("|");
-    const ref = c.id === "books" ? `Book ${idx + 1} of 39` : r;
+    const ref = books ? books[idx] : r;
     const keys = keysOf(c.mode, d.replace(/\s*\(.*\)$/, ""), al);
     if (c.refs && /\d/.test(r || "")) keys.push(norm(r), ...refKeys(r));
     return { d, t: +t, r: ref, al: al || "", why: why || "", keys, miss: false };

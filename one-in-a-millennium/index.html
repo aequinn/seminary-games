@@ -124,6 +124,21 @@ header.top { display: flex; align-items: center; justify-content: space-between;
 .start-bar { grid-column: 1 / -1; display: flex; justify-content: flex-end; align-items: center; gap: 18px; flex-wrap: wrap; }
 .start-bar .note { font-size: 1.3rem; background: #fff; border: 3px solid var(--ink); padding: 4px 10px; }
 
+/* My categories */
+.chk strong { overflow-wrap: anywhere; }
+.panel h2.prompt, .prompt-note, .ref, .key-items div, details.key summary, .missed .m b { overflow-wrap: anywhere; }
+.mine-cat { display: flex; gap: 8px; align-items: stretch; min-width: 0; }
+.mine-cat .chk { flex: 1; min-width: 0; }
+.mine-cat .btn { align-self: center; flex: none; }
+.cat-list.mine-list { grid-template-columns: minmax(0, 1fr); }
+.csv-tools { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+.csv-msg { margin: 10px 0 0; font-size: 1.15rem; }
+.csv-msg:empty { margin: 0; }
+.csv-errors { padding-left: 1.2em; overflow-wrap: anywhere; }
+.csv-cols { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 16px; }
+.csv-cols dt { color: var(--pink); }
+.csv-cols dd { margin: 0; }
+
 /* Scoring ladder */
 .gauge { display: flex; flex-direction: column; gap: 10px; }
 .gauge .lvl { display: grid; grid-template-columns: 28px 150px minmax(0,1fr) auto; align-items: center; gap: 10px; }
@@ -317,6 +332,15 @@ details.key summary { cursor: pointer; font-size: 1.4rem; display: flex; gap: 10
     <button class="btn small" type="button" id="key-close">Close</button>
   </div>
   <div class="dlg-body" id="key-body"></div>
+</dialog>
+
+<input type="file" id="csv-file" accept=".csv,text/csv" aria-label="Categories CSV file" hidden>
+<dialog id="csv-dlg" aria-labelledby="csv-title">
+  <div class="dlg-head">
+    <h2 id="csv-title">My categories</h2>
+    <button class="btn small" type="button" id="csv-close">Close</button>
+  </div>
+  <div class="dlg-body" id="csv-body"></div>
 </dialog>
 
 <dialog id="join-dlg" class="join-dlg" aria-labelledby="join-title">
@@ -1172,7 +1196,7 @@ const RAW = [
 const STRIP = new Set(["the","a","an","king","queen","prophet","prophetess","judge","book","of","1","2","3","first","second","i","ii","1st","2nd","saint","st"]);
 function norm(s) {
   return String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
-    .replace(/['’‘`]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+    .normalize("NFC").replace(/['’‘`]/g, "").replace(/[^\p{L}\p{N}\p{M}]+/gu, " ").trim();
 }
 function stripLead(s) {
   const w = s.split(" ");
@@ -1211,29 +1235,210 @@ function refKeys(r) {
   return out;
 }
 
-const CATS = RAW.map(c => {
-  const keysOf = (display, aliases) => {
-    const all = [display].concat(aliases ? aliases.split(";") : []).map(x => norm(x)).filter(Boolean);
-    const out = new Set();
-    all.forEach(k => { out.add(k); if (c.mode === "name") out.add(stripLead(k)); });
-    return [...out];
-  };
+function keysOf(mode, display, aliases) {
+  const all = [display].concat(aliases ? aliases.split(";") : []).map(x => norm(x)).filter(Boolean);
+  const out = new Set();
+  all.forEach(k => { out.add(k); if (mode === "name") out.add(stripLead(k)); });
+  return [...out];
+}
+/* Samuel, Kings and Chronicles are one answer each but two books each, so count books, not answers. */
+function bookRefs(answers) {
+  let next = 1;
+  return answers.map(s => {
+    const first = next;
+    next += s.split("|")[0].endsWith("(1 & 2)") ? 2 : 1;
+    return next - first === 2 ? `Books ${first}–${first + 1} of 39` : `Book ${first} of 39`;
+  });
+}
+const BUILT_IN = RAW.map(c => {
+  const books = c.id === "books" ? bookRefs(c.a) : null;
   const a = c.a.map((s, idx) => {
     const [d, t, r, al, why] = s.split("|");
-    const ref = c.id === "books" ? `Book ${idx + 1} of 39` : r;
-    const keys = keysOf(d.replace(/\s*\(.*\)$/, ""), al);
+    const ref = books ? books[idx] : r;
+    const keys = keysOf(c.mode, d.replace(/\s*\(.*\)$/, ""), al);
     if (c.refs && /\d/.test(r || "")) keys.push(norm(r), ...refKeys(r));
     return { d, t: +t, r: ref, al: al || "", why: why || "", keys, miss: false };
   });
   const n = (c.n || []).map(s => {
     const [d, r, note, al] = s.split("|");
-    const keys = keysOf(d, al);
+    const keys = keysOf(c.mode, d, al);
     if (c.refs && /\d/.test(r || "")) keys.push(norm(r), ...refKeys(r));
     return { d, r, note, al: al || "", keys, miss: true };
   });
   return { ...c, a, n };
 });
-const CAT = Object.fromEntries(CATS.map(c => [c.id, c]));
+/* ---------- My categories: CSV ----------
+   Leaders can upload their own categories. They are saved in this browser only and never sent to
+   the server. One row per answer; level 1-5 is the tier, 0 is "Close, but no". The whole file is
+   checked first, and nothing is saved if any row has a problem.
+   A game keeps its own copy (S.cats) of the uploaded categories it uses, so replacing or deleting
+   one can't break a game in progress. */
+const MINE_KEY = "one-in-a-millennium-categories-v1";
+const MINE_GROUP = { id: "mine", title: "My categories", sub: "Your own categories, saved in this browser only." };
+const CSV_COLS = ["category", "question", "answer", "level", "reference", "also_accept", "explanation", "hint", "difficulty"];
+const CSV_REQUIRED = CSV_COLS.slice(0, 4);
+const CSV_MAX = { category: 60, question: 160, answer: 100, reference: 100, also_accept: 500, explanation: 300, hint: 160 };
+const MINE_MAX = { bytes: 1000000, cats: 100, answers: 250, stored: 1500000 };
+const DIFFS = ["Easy", "Medium", "Hard"];
+const CSV_TEMPLATE = [
+  CSV_COLS,
+  ["On the ark", "Name someone who was on Noah's ark", "Noah", "1", "Genesis 7:13", "", "", "People only, no animals.", "Medium"],
+  ["On the ark", "", "Shem", "2", "Genesis 7:13", "", "", "", ""],
+  ["On the ark", "", "Ham", "2", "Genesis 7:13", "", "", "", ""],
+  ["On the ark", "", "Japheth", "3", "Genesis 7:13", "japeth; jafeth", "", "", ""],
+  ["On the ark", "", "Noah's wife", "4", "Genesis 7:13", "wife of noah", "", "", ""],
+  ["On the ark", "", "Wives of Noah's sons", "5", "Genesis 7:13", "sons wives; daughters in law", "Eight people were saved in all.", "", ""],
+  ["On the ark", "", "Methuselah", "0", "Genesis 5:27", "", "He was Noah's grandfather, but he wasn't on the ark.", "", ""],
+  ["Gifts of the Wise Men", "Name a gift the Wise Men brought to Jesus", "Gold", "1", "Matthew 2:11", "", "", "", "Easy"],
+  ["Gifts of the Wise Men", "", "Frankincense", "2", "Matthew 2:11", "incense", "", "", ""],
+  ["Gifts of the Wise Men", "", "Myrrh", "3", "Matthew 2:11", "mur; mir", "", "", ""],
+  ["Gifts of the Wise Men", "", "Silver", "0", "", "", "Silver isn't one of the three gifts.", "", ""]
+];
+
+/* Excel's "CSV UTF-8" and Google Sheets write UTF-8. Excel can also write UTF-16 or Windows-1252. */
+function decodeCSV(buf) {
+  const b = new Uint8Array(buf);
+  if (b[0] === 0x50 && b[1] === 0x4B) return { error: "That's a spreadsheet file, not a CSV. In Excel, use Save As and choose CSV UTF-8. In Google Sheets, use File > Download > Comma-separated values." };
+  if (b[0] === 0xFF && b[1] === 0xFE) return { text: new TextDecoder("utf-16le").decode(b) };
+  if (b[0] === 0xFE && b[1] === 0xFF) return { text: new TextDecoder("utf-16be").decode(b) };
+  if (b.includes(0)) return { error: "That file isn't text. Save it as CSV UTF-8 and try again." };
+  try { return { text: new TextDecoder("utf-8", { fatal: true }).decode(b) }; }
+  catch (e) { return { text: new TextDecoder("windows-1252").decode(b), warning: "This file isn't saved as UTF-8. Check accents and dashes below. If any look wrong, save it as CSV UTF-8 and upload it again." }; }
+}
+
+/* Returns every row, blank ones too, so error messages match the spreadsheet's row numbers. */
+function parseCSV(text) {
+  const src = text.replace(/^﻿/, "");
+  const head = src.trimStart().split(/[\r\n]/)[0];
+  const sep = [",", ";", "\t"].reduce((best, x) => head.split(x).length > head.split(best).length ? x : best);
+  const rows = [];
+  let row = [], cell = "", quoted = false, quoteRow = 0;
+  for (let i = 0; i < src.length; i++) {
+    const ch = src[i];
+    if (quoted) {
+      if (ch !== '"') cell += ch;
+      else if (src[i + 1] === '"') { cell += '"'; i++; }
+      else quoted = false;
+    } else if (ch === '"' && !cell.trim()) { quoted = true; cell = ""; quoteRow = rows.length + 1; }
+    else if (ch === sep) { row.push(cell); cell = ""; }
+    else if (ch === "\n" || ch === "\r") {
+      if (ch === "\r" && src[i + 1] === "\n") i++;
+      row.push(cell); rows.push(row); row = []; cell = "";
+    } else cell += ch;
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  return { rows, unclosed: quoted ? quoteRow : 0 };
+}
+
+function readCategories(text) {
+  const errors = [], warnings = [], groups = new Map();
+  const fail = (row, msg) => errors.push(row ? `Row ${row}: ${msg}` : msg);
+  const done = cats => ({ errors, warnings, cats: errors.length ? [] : cats });
+
+  const { rows, unclosed } = parseCSV(text);
+  if (unclosed) { fail(unclosed, "A quote mark is opened but never closed."); return done([]); }
+  const top = rows.findIndex(r => r.some(v => v.trim()));
+  if (top < 0) { fail(0, "The file is empty."); return done([]); }
+  const head = rows[top].map(h => h.trim().toLowerCase().replace(/[\s-]+/g, "_"));
+  const missing = CSV_REQUIRED.filter(k => !head.includes(k));
+  if (missing.length) { fail(top + 1, `The heading row is missing: ${missing.join(", ")}. Download the template to see the layout.`); return done([]); }
+  const twice = CSV_COLS.filter(k => head.indexOf(k) !== head.lastIndexOf(k));
+  if (twice.length) { fail(top + 1, `These headings appear more than once: ${twice.join(", ")}.`); return done([]); }
+  const unknown = head.filter(h => h && !CSV_COLS.includes(h));
+  if (unknown.length) warnings.push(`These columns aren't used: ${unknown.join(", ")}.`);
+
+  rows.slice(top + 1).forEach((cells, k) => {
+    const row = top + k + 2;
+    if (!cells.some(v => v.trim())) return;
+    if (cells.slice(head.length).some(v => v.trim())) { fail(row, "There are more cells than headings. Put quote marks around any value that contains a comma."); return; }
+    const v = {};
+    CSV_COLS.forEach(col => {
+      /* A leading apostrophe before = + - @ is added on export so spreadsheets don't run it as a formula */
+      v[col] = (cells[head.indexOf(col)] || "").replace(/\s+/g, " ").trim().replace(/^'(?=[=+\-@])/, "");
+      if (CSV_MAX[col] && v[col].length > CSV_MAX[col]) fail(row, `The ${col} is longer than ${CSV_MAX[col]} characters.`);
+    });
+
+    const id = norm(v.category);
+    if (!id) { fail(row, "The category is blank. Every row needs one."); return; }
+    if (!groups.has(id)) groups.set(id, { row, title: v.category, question: "", hint: "", difficulty: "", a: [], n: [], used: new Map() });
+    const g = groups.get(id);
+
+    let diff = v.difficulty;
+    if (diff) {
+      diff = DIFFS.find(d => d.toLowerCase() === diff.toLowerCase()) || "";
+      if (!diff) fail(row, `The difficulty “${v.difficulty}” should be Easy, Medium or Hard.`);
+    }
+    for (const [col, val] of [["question", v.question], ["hint", v.hint], ["difficulty", diff]]) {
+      if (!val) continue;
+      if (!g[col]) g[col] = val;
+      else if (g[col] !== val) fail(row, `The ${col} is different from the one above it for “${g.title}”. A category has only one.`);
+    }
+
+    if (!/^[0-5]$/.test(v.level)) fail(row, `The level ${v.level ? `“${v.level}”` : "is blank. It"} should be a whole number from 0 to 5.`);
+    const display = norm(v.answer.replace(/\s*\(.*\)$/, ""));
+    if (!display) { fail(row, "The answer needs some letters or numbers."); return; }
+
+    const aliases = v.also_accept.split(";").map(x => x.trim()).filter(x => norm(x));
+    for (const key of new Set([display, ...aliases.map(norm)])) {
+      if (g.used.has(key)) fail(row, `“${key}” is already accepted by row ${g.used.get(key)}. Each wording can belong to only one answer.`);
+      else g.used.set(key, row);
+    }
+
+    const al = aliases.join(";");
+    if (v.level === "0") g.n.push({ d: v.answer, r: v.reference, note: v.explanation || "That one doesn't count for this category.", al });
+    else g.a.push({ d: v.answer, t: +v.level, r: v.reference, al, why: v.explanation });
+  });
+
+  if (!groups.size && !errors.length) fail(0, "There are headings, but no answers under them.");
+  if (groups.size > MINE_MAX.cats) fail(0, `A file can have up to ${MINE_MAX.cats} categories.`);
+  const cats = [...groups.values()].map(g => {
+    if (!g.question) fail(g.row, `“${g.title}” needs a question on at least one of its rows.`);
+    if (!g.a.length) fail(g.row, `“${g.title}” needs at least one answer with a level from 1 to 5.`);
+    if (g.a.length + g.n.length > MINE_MAX.answers) fail(g.row, `“${g.title}” has more than ${MINE_MAX.answers} answers.`);
+    return { title: g.title, prompt: g.question, note: g.hint, diff: g.difficulty || "Medium", a: g.a, n: g.n };
+  });
+  return done(cats);
+}
+
+function writeCSV(rows) {
+  const cell = x => {
+    let s = String(x);
+    if (/^[=+\-@]/.test(s)) s = "'" + s;
+    return /[",;\t\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  return "﻿" + rows.map(r => r.map(cell).join(",")).join("\r\n") + "\r\n"; /* the BOM tells Excel it's UTF-8 */
+}
+function categoryRows(list) {
+  return [CSV_COLS].concat(...list.map(c =>
+    c.a.map(a => [a.d, a.t, a.r, a.al, a.why]).concat(c.n.map(n => [n.d, 0, n.r, n.al, n.note]))
+      .map((rest, i) => [c.title, i ? "" : c.prompt, ...rest, i ? "" : c.note, i ? "" : c.diff])));
+}
+
+/* ---------- My categories: storage ---------- */
+function validMine(list) {
+  const str = (...xs) => xs.every(x => typeof x === "string");
+  return (Array.isArray(list) ? list : []).filter(c => c
+    && str(c.id, c.title, c.prompt, c.note) && /^my-[a-z0-9]{1,24}$/.test(c.id) && DIFFS.includes(c.diff)
+    && Array.isArray(c.a) && c.a.length && c.a.every(a => a && str(a.d, a.r, a.al, a.why) && TIERS[a.t])
+    && Array.isArray(c.n) && c.n.every(n => n && str(n.d, n.r, n.note, n.al)));
+}
+function readMine() {
+  try { return validMine(JSON.parse(localStorage.getItem(MINE_KEY))); } catch (e) { return []; }
+}
+/* Uploads always match by keyword: "name" matching drops leading numbers, so 1 Samuel would equal 2 Samuel. */
+function compileMine(c) {
+  const keys = x => keysOf("kw", x.d.replace(/\s*\(.*\)$/, ""), x.al);
+  return { ...c, group: MINE_GROUP.id, mode: "kw",
+    a: c.a.map(a => ({ ...a, keys: keys(a), miss: false })),
+    n: c.n.map(n => ({ ...n, keys: keys(n), miss: true })) };
+}
+/* CATS is what can be picked. CAT can also find the copies belonging to the game in progress. */
+function useCategories(gameCats) {
+  CATS = MINE.map(compileMine).concat(BUILT_IN);
+  CAT = Object.fromEntries(CATS.concat(validMine(gameCats).map(compileMine)).map(c => [c.id, c]));
+}
+let MINE = readMine(), CATS, CAT;
+useCategories();
 
 /* Book abbreviations, expanded only when a chapter number follows ("dan 2" yes, "Dan" the son of Jacob no). */
 const ABBR = { gen: "genesis", ex: "exodus", exod: "exodus", josh: "joshua", ps: "psalm", psa: "psalm", psalms: "psalm",
@@ -1269,15 +1474,15 @@ function matchAnswer(cat, input) {
 /* ---------- State ---------- */
 const TEAM_COLORS = ["#FF3D9A", "#FFD23F", "#3FA9FF", "#5FD43A", "#FF8A3D", "#A66BFF", "#2EE6D6", "#FF4B4B"];
 const KEY = "one-in-a-millennium-v1";
-const STUDY_IDS = CATS.filter(c => c.group === "study" || c.group === "dm").map(c => c.id);
+const STUDY_IDS = BUILT_IN.filter(c => c.group === "study" || c.group === "dm").map(c => c.id);
 /* links[i] is the id of the phone that plays for team i, or null when the leader types that team's answers */
 function fresh(teams, links) {
-  return { phase: "setup", teams: teams || ["Team 1", "Team 2", "Team 3"], links: links || [], timer: 60, picked: STUDY_IDS.slice(), order: [], round: 0, history: [], drafts: {} };
+  return { phase: "setup", teams: teams || ["Team 1", "Team 2", "Team 3"], links: links || [], timer: 60, picked: STUDY_IDS.slice(), cats: [], order: [], round: 0, history: [], drafts: {} };
 }
 function load() {
   try {
     const s = JSON.parse(localStorage.getItem(KEY));
-    if (s && s.phase && Array.isArray(s.teams)) { s.picked = (s.picked || []).filter(id => CAT[id]); s.order = (s.order || []).filter(id => CAT[id]); s.links = Array.isArray(s.links) ? s.links : []; return s; }
+    if (s && s.phase && Array.isArray(s.teams)) { if (s.phase !== "setup") useCategories(s.cats); s.picked = (s.picked || []).filter(id => CAT[id]); s.order = (s.order || []).filter(id => CAT[id]); s.links = Array.isArray(s.links) ? s.links : []; return s; }
   } catch (e) {}
   return null;
 }
@@ -1297,6 +1502,7 @@ const T = { left: 0, running: false, iv: null, done: false };
 
 function shuffle(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+function refHTML(r) { return r ? `<span class="ref">${esc(r)}</span>` : ""; }
 function teamName(i) { return (S.teams[i] || "").trim() || `Team ${i + 1}`; }
 
 function roundPoints(r) {
@@ -1377,7 +1583,19 @@ function gaugeHTML() {
   </div>`;
 }
 
+function catCheckHTML(c) {
+  return `<label class="chk">
+              <input type="checkbox" id="cat-${c.id}" data-cat="${c.id}" ${S.picked.includes(c.id) ? "checked" : ""}>
+              <span><strong>${esc(c.title)}</strong><small>${esc(c.diff)} · ${c.a.length} answer${c.a.length === 1 ? "" : "s"}</small></span>
+            </label>`;
+}
+function groupButtonHTML(id) {
+  const allOn = CATS.filter(c => c.group === id).every(c => S.picked.includes(c.id));
+  return `<button class="btn small ghost" type="button" id="group-${id}" data-group="${id}">${allOn ? "Clear" : "Select all"}</button>`;
+}
 function renderSetup() {
+  useCategories();
+  S.picked = S.picked.filter(id => CAT[id]);
   app.innerHTML = `
   <section class="setup">
     <div class="setup-hero">
@@ -1415,19 +1633,16 @@ function renderSetup() {
     <div class="panel">
       <h2>Categories</h2>
       <p class="sub">Each one you pick is one round. They're played in a random order.</p>
+      ${mineHTML()}
       ${GROUPS.map(g => {
         const cats = CATS.filter(c => c.group === g.id);
-        const allOn = cats.every(c => S.picked.includes(c.id));
         return `<div class="cat-group">
           <div class="row-between">
             <div><h3>${esc(g.title)}</h3><span class="note-txt" style="font-size:1.05rem">${esc(g.sub)}</span></div>
-            <button class="btn small ghost" type="button" data-group="${g.id}">${allOn ? "Clear" : "Select all"}</button>
+            ${groupButtonHTML(g.id)}
           </div>
           <div class="cat-list">
-            ${cats.map(c => `<label class="chk">
-              <input type="checkbox" id="cat-${c.id}" data-cat="${c.id}" ${S.picked.includes(c.id) ? "checked" : ""}>
-              <span><strong>${esc(c.title)}</strong><small>${c.diff} · ${c.a.length} answers</small></span>
-            </label>`).join("")}
+            ${cats.map(catCheckHTML).join("")}
           </div>
         </div>`;
       }).join("")}
@@ -1448,6 +1663,7 @@ function renderSetup() {
   }));
   document.getElementById("add-team").addEventListener("click", () => { S.teams.push(`Team ${S.teams.length + 1}`); render(); document.getElementById(`team-${S.teams.length - 1}`)?.select(); });
   LIVE.bindSetup();
+  bindMine();
   app.querySelectorAll("[data-timer]").forEach(b => b.addEventListener("click", () => { S.timer = +b.dataset.timer; render(); }));
   app.querySelectorAll("[data-cat]").forEach(cb => cb.addEventListener("change", () => {
     const id = cb.dataset.cat;
@@ -1465,6 +1681,9 @@ function renderSetup() {
 
 function startGame() {
   S.teams = S.teams.map((t, i) => t.trim() || `Team ${i + 1}`);
+  S.cats = S.picked.map(id => CAT[id]).filter(c => c && c.group === MINE_GROUP.id)
+    .map(({ id, title, prompt, note, diff, a, n }) => ({ id, title, prompt, note, diff,
+      a: a.map(({ d, t, r, al, why }) => ({ d, t, r, al, why })), n: n.map(({ d, r, note, al }) => ({ d, r, note, al })) }));
   S.order = shuffle(S.picked);
   S.round = 0; S.history = []; S.drafts = {};
   S.gameId = Date.now().toString(36); /* tags phone answers so a late answer can't land in a new game */
@@ -1497,7 +1716,7 @@ function promptHTML(cat, withTimer) {
       <div>
         <div class="prompt-meta">
           <span class="eyebrow">Round ${S.round + 1} of ${S.order.length}</span>
-          <span class="diff">${cat.diff}</span>
+          <span class="diff">${esc(cat.diff)}</span>
         </div>
         <h2 class="prompt">${esc(cat.prompt)}</h2>
         <p class="prompt-note">${esc(cat.note)}</p>
@@ -1656,10 +1875,10 @@ function renderReveal() {
     let detail;
     if (!e.text) detail = `<span class="note-txt">No answer</span>`;
     else if (valid) {
-      detail = `<span class="chip tier-${e.t}">${TIERS[e.t].name}</span><span>${norm(e.text) === norm(e.d) ? "" : "Counted as <b>" + esc(e.d) + "</b>"}</span><span class="ref">${esc(e.r)}</span>${e.why ? `<span class="why${cat.group === "dm" ? "" : " matters"}">${esc(e.why)}</span>` : ""}`;
+      detail = `<span class="chip tier-${e.t}">${TIERS[e.t].name}</span><span>${norm(e.text) === norm(e.d) ? "" : "Counted as <b>" + esc(e.d) + "</b>"}</span>${refHTML(e.r)}${e.why ? `<span class="why${cat.group === "dm" ? "" : " matters"}">${esc(e.why)}</span>` : ""}`;
     } else if (e.override === "no") detail = `<span class="chip miss">Not counted</span><span class="note-txt">Leader ruled this out</span>`;
     else if (e.override === "yes") detail = `<span class="chip tier-${e.ot || 1}">${TIERS[e.ot || 1].name}</span><span class="note-txt">Counted by the leader</span>`;
-    else if (e.miss) detail = `<span class="chip miss">Close, but no</span><span class="note-txt">${esc(e.note)}</span><span class="ref">${esc(e.r)}</span>`;
+    else if (e.miss) detail = `<span class="chip miss">Close, but no</span><span class="note-txt">${esc(e.note)}</span>${refHTML(e.r)}`;
     else detail = `<span class="chip miss">Not on the list</span><span class="note-txt">Fix the spelling and recheck, or count it if you agree.</span>`;
     if (e.orig && e.orig !== e.text) detail += `<span class="note-txt">Corrected from “${esc(e.orig)}”</span>`;
     const fixBtn = `<button class="btn small ghost" type="button" data-edit="${i}">${e.text ? "Fix spelling" : "Add answer"}</button>`;
@@ -1694,7 +1913,7 @@ function renderReveal() {
         <h2>Rare answers nobody said</h2>
         ${rare.length
           ? `<p class="sub">The highest-scoring answers still on the table.</p>
-             <div class="missed">${rare.map(a => `<div class="m"><span class="chip tier-${a.t}" style="align-self:flex-start">${TIERS[a.t].name}</span><b>${esc(a.d)}</b><span class="ref">${esc(a.r)}</span>${a.why ? `<span class="note-txt" style="font-size:1rem">${esc(a.why)}</span>` : ""}</div>`).join("")}</div>`
+             <div class="missed">${rare.map(a => `<div class="m"><span class="chip tier-${a.t}" style="align-self:flex-start">${TIERS[a.t].name}</span><b>${esc(a.d)}</b>${refHTML(a.r)}${a.why ? `<span class="note-txt" style="font-size:1rem">${esc(a.why)}</span>` : ""}</div>`).join("")}</div>`
           : `<p class="sub" style="margin:0">Every rare answer was taken. Impressive.</p>`}
       </div>
       <div class="nav-foot" style="justify-content:space-between">
@@ -2045,7 +2264,7 @@ function renderFinal() {
     <div class="panel best">
       <span class="eyebrow">Rarest answer of the game</span>
       ${best ? `<div class="big">${esc(best.e.d)}</div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><span class="chip tier-${best.e.t}">${TIERS[best.e.t].name}</span><span class="ref">${esc(best.e.r)}</span></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><span class="chip tier-${best.e.t}">${TIERS[best.e.t].name}</span>${refHTML(best.e.r)}</div>
         <p class="note-txt" style="margin:0">${esc(teamName(best.i))}, for “${esc(best.cat.prompt)}”</p>` : `<p class="note-txt">No valid answers this game.</p>`}
       <p class="note-txt" style="margin:8px 0 0">${S.history.filter(Boolean).length} rounds played.</p>
       <div class="actions" style="margin-top:12px">
@@ -2072,20 +2291,162 @@ endBtn.addEventListener("click", () => {
 });
 
 /* Answer key */
+function keyHTML(c, tag) {
+  return `<details class="key">
+    <summary>${esc(c.title)}${tag ? ` <span class="diff">${esc(tag)}</span>` : ""} <span class="diff">${esc(c.diff)} · ${c.a.length} answer${c.a.length === 1 ? "" : "s"}</span></summary>
+    <p class="note-txt" style="margin:8px 0 0">“${esc(c.prompt)}”${c.note ? ` · ${esc(c.note)}` : ""}</p>
+    ${[1, 2, 3, 4, 5].map(t => { const items = c.a.filter(a => a.t === t); return items.length ? `<div class="key-tier"><span class="chip tier-${t}">${TIERS[t].name} · ${TIERS[t].pts}</span></div>
+      <div class="key-items">${items.map(a => `<div>${esc(a.d)} ${refHTML(a.r)}${a.why ? `<span class="alt" style="color:var(--ink)">${esc(a.why)}</span>` : ""}${a.al ? `<span class="alt">Also accepts: ${esc(a.al.split(";").join(", "))}</span>` : ""}</div>`).join("")}</div>` : ""; }).join("")}
+    ${c.n.length ? `<div class="key-miss"><b>Close but not counted:</b> ${c.n.map(m => `${esc(m.d)} (${esc(m.note)})`).join(" · ")}</div>` : ""}
+  </details>`;
+}
 const dlg = document.getElementById("key-dlg");
 document.getElementById("btn-key").addEventListener("click", () => {
-  document.getElementById("key-body").innerHTML = GROUPS.map(g => `<h3 class="key-section">${esc(g.title)}</h3>` +
-    CATS.filter(c => c.group === g.id).map(c => `<details class="key">
-    <summary>${esc(c.title)} <span class="diff">${c.diff} · ${c.a.length} answers</span></summary>
-    <p class="note-txt" style="margin:8px 0 0">“${esc(c.prompt)}” · ${esc(c.note)}</p>
-    ${[1, 2, 3, 4, 5].map(t => { const items = c.a.filter(a => a.t === t); return items.length ? `<div class="key-tier"><span class="chip tier-${t}">${TIERS[t].name} · ${TIERS[t].pts}</span></div>
-      <div class="key-items">${items.map(a => `<div>${esc(a.d)} <span class="ref">${esc(a.r)}</span>${a.why ? `<span class="alt" style="color:var(--ink)">${esc(a.why)}</span>` : ""}${a.al ? `<span class="alt">Also accepts: ${esc(a.al.split(";").join(", "))}</span>` : ""}</div>`).join("")}</div>` : ""; }).join("")}
-    ${c.n.length ? `<div class="key-miss"><b>Close but not counted:</b> ${c.n.map(m => `${esc(m.d)} (${esc(m.note)})`).join(" · ")}</div>` : ""}
-  </details>`).join("")).join("");
+  /* During a game, show the copy that game is using */
+  const mine = S.phase === "setup" ? MINE : validMine(S.cats);
+  const groups = mine.length ? [MINE_GROUP, ...GROUPS] : GROUPS;
+  document.getElementById("key-body").innerHTML = groups.map(g => `<h3 class="key-section">${esc(g.title)}</h3>` +
+    (g === MINE_GROUP ? mine.map(compileMine) : BUILT_IN.filter(c => c.group === g.id)).map(c => keyHTML(c)).join("")).join("");
   dlg.showModal();
 });
 document.getElementById("key-close").addEventListener("click", () => dlg.close());
 dlg.addEventListener("click", e => { if (e.target === dlg) dlg.close(); });
+
+/* ---------- My categories: screens ---------- */
+const csvFile = document.getElementById("csv-file");
+const csvDlg = document.getElementById("csv-dlg");
+let mineMsg = "", deleting = null;
+
+function mineHTML() {
+  return `<div class="cat-group">
+    <div class="row-between">
+      <div><h3>${MINE_GROUP.title}</h3><span class="note-txt" style="font-size:1.05rem">${MINE_GROUP.sub}</span></div>
+      ${MINE.length ? groupButtonHTML(MINE_GROUP.id) : ""}
+    </div>
+    ${MINE.length ? `<div class="cat-list mine-list">${MINE.map(c => `<div class="mine-cat">
+      ${catCheckHTML(CAT[c.id])}
+      <button class="btn small ghost" type="button" id="del-${c.id}" data-delete="${c.id}" aria-label="${deleting === c.id ? "Click again to delete" : "Delete"} ${esc(c.title)}">${deleting === c.id ? "Sure?" : "Delete"}</button>
+    </div>`).join("")}</div>` : ""}
+    <div class="csv-tools">
+      <button class="btn small primary" type="button" id="csv-upload">Upload CSV</button>
+      <button class="btn small ghost" type="button" id="csv-template">Download template</button>
+      ${MINE.length ? `<button class="btn small ghost" type="button" id="csv-export">Export my categories</button>` : ""}
+      <button class="btn small ghost" type="button" id="csv-help">How it works</button>
+    </div>
+    <p class="csv-msg" role="status">${esc(mineMsg)}</p>
+  </div>`;
+}
+function bindMine() {
+  document.getElementById("csv-upload").addEventListener("click", () => { csvFile.value = ""; csvFile.click(); });
+  document.getElementById("csv-template").addEventListener("click", () => download("one-in-a-millennium-template.csv", writeCSV(CSV_TEMPLATE)));
+  document.getElementById("csv-export")?.addEventListener("click", () => download("my-categories.csv", writeCSV(categoryRows(MINE))));
+  document.getElementById("csv-help").addEventListener("click", showHelp);
+  app.querySelectorAll("[data-delete]").forEach(b => b.addEventListener("click", () => {
+    const id = b.dataset.delete;
+    if (deleting !== id) {
+      deleting = id;
+      setTimeout(() => { if (deleting === id && S.phase === "setup") { deleting = null; render(); } }, 3000);
+    } else {
+      deleting = null;
+      mineMsg = saveMine(readMine().filter(c => c.id !== id)) || "Category deleted.";
+    }
+    render();
+  }));
+}
+/* Returns an error message, or "" when saved. */
+function saveMine(list) {
+  const json = JSON.stringify(list);
+  if (json.length > MINE_MAX.stored) return "That's more than this browser can keep. Export and delete some categories first.";
+  try { localStorage.setItem(MINE_KEY, json); }
+  catch (e) { return "This browser wouldn't save the change. Its storage may be full or turned off."; }
+  MINE = list;
+  useCategories();
+  return "";
+}
+function download(name, text) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type: "text/csv;charset=utf-8" }));
+  a.download = name;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+
+function showDialog(title, html) {
+  document.getElementById("csv-title").textContent = title;
+  document.getElementById("csv-body").innerHTML = html;
+  if (!csvDlg.open) csvDlg.showModal();
+  csvDlg.scrollTop = 0;
+}
+function showHelp() {
+  const cols = [
+    ["category", "Required on every row. Rows with the same category make one round."],
+    ["question", "What teams see. Only one row of each category needs it."],
+    ["answer", "One answer per row."],
+    ["level", `${[1, 2, 3, 4, 5].map(t => `${t} = ${TIERS[t].name} (${TIERS[t].pts})`).join(", ")}. Use 0 for “Close, but no”.`],
+    ["reference", "Optional. Shown at the reveal."],
+    ["also_accept", "Optional. Other wordings, separated by semicolons. Small typos already count."],
+    ["explanation", "Optional. Why it matters or, for level 0, why it doesn't count."],
+    ["hint", "Optional. A line under the question, one per category."],
+    ["difficulty", "Optional. Easy, Medium or Hard, one per category."]
+  ];
+  showDialog("Make your own categories", `
+    <p>Download the template, change it in Excel or Google Sheets, save it as CSV, then upload it. You'll see a preview before anything is saved.</p>
+    <dl class="csv-cols">${cols.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
+    <p class="note-txt">Uploading a category with the same name replaces it. Categories stay in this browser on this computer, so export a copy to keep, to share, or to use on another computer. Anyone using this browser can see them.</p>`);
+}
+function showProblems(name, errors) {
+  showDialog("Please fix the file", `
+    <p><b>${esc(name)}</b> wasn't saved. Fix ${errors.length === 1 ? "this" : "these"} and upload it again.</p>
+    <ul class="csv-errors">${errors.slice(0, 50).map(e => `<li>${esc(e)}</li>`).join("")}</ul>
+    ${errors.length > 50 ? `<p class="note-txt">And ${errors.length - 50} more.</p>` : ""}`);
+}
+function showPreview(name, found) {
+  const existing = new Set(MINE.map(c => norm(c.title)));
+  const n = found.cats.length;
+  showDialog("Check before saving", `
+    <p><b>${esc(name)}</b> has ${n} ${n === 1 ? "category" : "categories"}. Open one to check it. The answers will show on this screen.</p>
+    ${found.warnings.map(w => `<p class="live-warn">${esc(w)}</p>`).join("")}
+    ${found.cats.map(c => keyHTML(compileMine(c), existing.has(norm(c.title)) ? "Replaces saved copy" : "")).join("")}
+    <div class="csv-tools">
+      <button class="btn primary" type="button" id="csv-save">Save ${n} ${n === 1 ? "category" : "categories"}</button>
+      <button class="btn ghost" type="button" id="csv-cancel">Cancel</button>
+    </div>
+    <p class="csv-msg" id="csv-save-error" role="alert"></p>`);
+  document.getElementById("csv-cancel").addEventListener("click", () => csvDlg.close());
+  document.getElementById("csv-save").addEventListener("click", () => {
+    const list = readMine(); /* read again, in case another tab changed it */
+    const ids = found.cats.map(c => {
+      const at = list.findIndex(m => norm(m.title) === norm(c.title));
+      /* A replaced category keeps its id, so it stays selected */
+      const id = at >= 0 ? list[at].id : `my-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+      if (at >= 0) list[at] = { ...c, id }; else list.push({ ...c, id });
+      return id;
+    });
+    const err = saveMine(list);
+    if (err) { document.getElementById("csv-save-error").textContent = err; return; }
+    S.picked = [...new Set(S.picked.concat(ids))];
+    mineMsg = `Saved and selected ${n} ${n === 1 ? "category" : "categories"}. To play only these, clear the other groups.`;
+    csvDlg.close();
+    render();
+  });
+}
+csvFile.addEventListener("change", async () => {
+  const file = csvFile.files[0];
+  if (!file) return;
+  if (file.size > MINE_MAX.bytes) { showProblems(file.name, ["The file is larger than 1 MB."]); return; }
+  let buf;
+  try { buf = await file.arrayBuffer(); }
+  catch (e) { showProblems(file.name, ["The file couldn't be read. If it's open in another program, close it and try again."]); return; }
+  const dec = decodeCSV(buf);
+  if (dec.error) { showProblems(file.name, [dec.error]); return; }
+  const found = readCategories(dec.text);
+  if (found.errors.length) { showProblems(file.name, found.errors); return; }
+  if (dec.warning) found.warnings.unshift(dec.warning);
+  showPreview(file.name, found);
+});
+document.getElementById("csv-close").addEventListener("click", () => csvDlg.close());
 
 /* ---------- Phones ----------
    Optional. The leader opens a room (POST /api/rooms), shows its QR code, and each team's

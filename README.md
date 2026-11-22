@@ -53,4 +53,4 @@ When testing with phones locally, open the game on the computer using the networ
 npm run build:scriptureman
 ```
 
-That writes `scriptureman/build/scriptureman.html` with the CSS and JavaScript inlined. Rebuild after every edit.
+That writes `scriptureman/build/scriptureman.html` with the CSS and JavaScript inlined. Rebuild after every edit. The site build inlines the script the same way, so keep the script tag a plain `<script>`: browsers won't load `type="module"` scripts from a file on disk.

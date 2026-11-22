@@ -3,13 +3,13 @@
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { inlineScript } from "./inline.mjs";
 
 const dir = dirname(fileURLToPath(import.meta.url));
 const read = name => readFileSync(join(dir, name), "utf8");
 
 const css = read("style.css");
-const js = read("script.js");
-let html = read("index.html");
+let html = inlineScript(read("index.html"));
 
 // Replacement functions (not strings) so "$" in the code is copied literally.
 const replaceOnce = (pattern, make, what) => {
@@ -17,7 +17,6 @@ const replaceOnce = (pattern, make, what) => {
   html = html.replace(pattern, make);
 };
 replaceOnce(/<link rel="stylesheet" href="style\.css">/, () => `<style>\n${css}</style>`, "style.css");
-replaceOnce(/<script type="module" src="script\.js"><\/script>/, () => `<script type="module">\n${js.replace(/<\/script/gi, "<\\/script")}</script>`, "script.js");
 
 mkdirSync(join(dir, "build"), { recursive: true });
 writeFileSync(join(dir, "build", "scriptureman.html"), html);
